@@ -1,0 +1,30 @@
+# Deps
+node_modules/
+.dart_tool/
+.build/
+pubspec.lock
+
+# Build output
+services/api/dist/
+apps/mobile/build/
+apps/mobile/.dart_tool/
+*.g.dart
+*.freezed.dart
+
+# Env & secrets — никогда не коммитим боевые ключи
+services/api/.env
+*.pem
+*.key
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+*.log
+
+# Docker data
+pgdata/
+
+# Flutter
+.flutter-plugins
+.flutter-plugins-dependencies

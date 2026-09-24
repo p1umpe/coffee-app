@@ -1,0 +1,50 @@
+openapi: 3.0.3
+info:
+  title: Simple Coffee API
+  version: 0.2.0
+  description: MVP — самовывоз + кружка/печати + iiko
+paths:
+  /v1/menu:
+    get:
+      summary: Меню точки (source — iiko, кэш 60с)
+      parameters:
+        - {name: shopId, in: query, required: true, schema: {type: string}}
+      responses:
+        '200': {description: items with dineInPrice/takeawayPrice, stopList flags}
+  /v1/orders:
+    post:
+      summary: Создать заказ (DINE_IN | TAKEAWAY)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [shopId, items, fulfillment, idempotencyKey]
+              properties:
+                shopId: {type: string}
+                fulfillment: {type: string, enum: [DINE_IN, TAKEAWAY]}
+                items: {type: array, items: {type: object}}
+                idempotencyKey: {type: string, format: uuid}
+      responses:
+        '201': {description: orderId, number (А-12), eta, payUrl}
+  /v1/loyalty/stamp:
+    post:
+      summary: Начислить печати (вызывает бариста при выдаче в кружке, скан QR)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [orderId, guestQr]
+              properties:
+                orderId: {type: string}
+                guestQr: {type: string}
+      responses:
+        '200': {description: stampsTotal, freeCupons}
+  /v1/iiko/webhook:
+    post:
+      summary: Webhook статусов кухни iiko → push гостю
+      responses:
+        '200': {description: ok}

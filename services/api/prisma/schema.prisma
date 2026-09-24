@@ -1,0 +1,127 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Fulfillment {
+  DINE_IN
+  TAKEAWAY
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  PAID
+  ACCEPTED
+  COOKING
+  READY
+  SERVED
+  CANCELLED
+  REFUNDED
+}
+
+model Shop {
+  id        String        @id @default(cuid())
+  name      String
+  address   String
+  lat       Float?
+  lon       Float?
+  phone     String?
+  opensAt   String        @default("08:00")
+  closesAt  String        @default("22:00")
+  isNew     Boolean       @default(false)
+  iikoId    String?       @unique
+  products  ShopProduct[]
+  orders    Order[]
+  createdAt DateTime      @default(now())
+}
+
+model Category {
+  id       String    @id @default(cuid())
+  slug     String    @unique
+  title    String
+  sort     Int       @default(0)
+  products Product[]
+}
+
+model Product {
+  id          String        @id @default(cuid())
+  iikoId      String?       @unique
+  title       String
+  description String?
+  imageUrl    String?
+  categoryId  String?
+  category    Category?     @relation(fields: [categoryId], references: [id])
+  givesStamp  Boolean       @default(true)
+  dineInPrice Int
+  shops       ShopProduct[]
+  kbju        Json?
+  tags        String[]      @default([])
+  isActive    Boolean       @default(true)
+}
+
+model ShopProduct {
+  id            String  @id @default(cuid())
+  shopId        String
+  shop          Shop    @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  productId     String
+  product       Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  dineInPrice   Int?
+  takeawayPrice Int?
+  inStopList    Boolean @default(false)
+
+  @@unique([shopId, productId])
+}
+
+model User {
+  id        String   @id @default(cuid())
+  phone     String   @unique
+  name      String?
+  guestQr   String   @unique @default(cuid())
+  stamps    Int      @default(0)
+  coupons   Coupon[]
+  orders    Order[]
+  createdAt DateTime @default(now())
+}
+
+model Order {
+  id             String      @id @default(cuid())
+  number         String      @unique
+  shopId         String
+  shop           Shop        @relation(fields: [shopId], references: [id])
+  userId         String?
+  user           User?       @relation(fields: [userId], references: [id])
+  fulfillment    Fulfillment
+  status         OrderStatus @default(PENDING_PAYMENT)
+  idempotencyKey String      @unique
+  items          Json
+  total          Int
+  stampsEarned   Int         @default(0)
+  iikoOrderId    String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+}
+
+model Coupon {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  code      String   @unique
+  isUsed    Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model OtpCode {
+  id        String   @id @default(cuid())
+  phone     String
+  code      String
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([phone])
+}
