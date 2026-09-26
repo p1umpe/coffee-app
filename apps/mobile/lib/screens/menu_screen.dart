@@ -2,18 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:dio/dio.dart';
 import '../core/session.dart';
-import '../theme/app_theme.dart';
-import '../widgets/product_card.dart';
+import '../theme/app_tokens.dart';
+import '../widgets/common.dart';
+import '../widgets/product_widgets.dart';
 
+/// Меню по спеке 3.2: заголовок + кофейня, чипы категорий, ProductTile, CTA корзины.
 class MenuScreen extends StatefulWidget {
-  const MenuScreen({super.key});
+  final ValueChanged<MenuItem> onOpenProduct;
+  const MenuScreen({super.key, required this.onOpenProduct});
+
   @override
   State<MenuScreen> createState() => _MenuScreenState();
 }
 
 class _MenuScreenState extends State<MenuScreen> {
   bool loading = false;
-  String? error;
+  bool netError = false;
 
   @override
   void initState() {
@@ -33,26 +37,31 @@ class _MenuScreenState extends State<MenuScreen> {
         }
       } catch (_) {}
     }
-    load();
+    await load();
   }
 
   Future<void> load() async {
     final s = context.read<Session>();
     if (s.shopId == null) {
-      setState(() => error = 'Выбери кофейню во вкладке «Кофейни»');
+      if (mounted) {
+        setState(() => netError = true);
+      }
+      // Витрина без API: мок как в макете
+      s.setMenu(MenuItem.mock());
       return;
     }
-    setState(() { loading = true; error = null; });
+    if (mounted) setState(() { loading = true; netError = false; });
     try {
       final r = await s.api.dio.get('/menu', queryParameters: {'shopId': s.shopId});
-      s.menuCache = (r.data as List)
+      final items = (r.data as List)
           .map((e) => MenuItem.fromJson(Map<String, dynamic>.from(e as Map)))
           .toList();
-      setState(() {});
+      s.setMenu(items.isEmpty ? MenuItem.mock() : items);
     } on DioException {
-      setState(() => error = 'Нет связи с API :3000. Бэк запущен?');
+      if (mounted) setState(() => netError = true);
+      if (s.menuCache.isEmpty) s.setMenu(MenuItem.mock());
     } finally {
-      setState(() => loading = false);
+      if (mounted) setState(() => loading = false);
     }
   }
 
@@ -60,67 +69,55 @@ class _MenuScreenState extends State<MenuScreen> {
   Widget build(BuildContext context) {
     final s = context.watch<Session>();
     return Scaffold(
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      body: SafeArea(
+        child: Stack(
           children: [
-            const Text('Simple Coffee', style: TextStyle(fontWeight: FontWeight.w800)),
-            Text(s.shopName, style: const TextStyle(fontSize: 12, color: SCColors.secondary)),
-          ],
-        ),
-        actions: [IconButton(icon: const Icon(Icons.refresh), onPressed: load)],
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.all(8),
-                child: Column(
-                  children: [
-                    SegmentedButton<Fulfillment>(
-                      segments: const [
-                        ButtonSegment(value: Fulfillment.dineIn, label: Text('В кружке 🍵')),
-                        ButtonSegment(value: Fulfillment.takeaway, label: Text('С собой 🥤')),
-                      ],
-                      selected: {s.fulfillment},
-                      onSelectionChanged: (v) => s.setFulfillment(v.first),
+            ListView(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 110),
+              children: [
+                if (netError) NetErrorBanner(onRetry: load),
+                Text('Меню', style: serif(21)),
+                GestureDetector(
+                  onTap: () {}, // выбор кофейни — на табе Кофейни
+                  child: Text('Кофейня на ${s.shopName}',
+                      style: sans(11, c: SCColors.muted)),
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  height: 30,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: s.categories.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 6),
+                    itemBuilder: (_, i) => CategoryChip(
+                      label: s.categories[i],
+                      active: s.categories[i] == s.activeCategory,
+                      onTap: () => s.setCategory(s.categories[i]),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      s.fulfillment == Fulfillment.dineIn
-                          ? 'Базовая цена · +${s.cartStampsDue} печати за корзину 🦊'
-                          : 'Дешевле на ~30 ₽ · без печатей',
-                      style: const TextStyle(fontSize: 13, color: SCColors.secondary),
-                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                if (loading) const SkeletonList() else ...[
+                  for (final m in s.filteredMenu) ...[
+                    ProductTile(item: m, onOpen: () => widget.onOpenProduct(m)),
+                    const SizedBox(height: 9),
                   ],
+                ],
+              ],
+            ),
+            if (s.cartCount > 0)
+              Positioned(
+                left: 16, right: 16, bottom: 12,
+                child: CtaButton(
+                  left: 'Корзина · ${s.cartCount}',
+                  right: rub(s.cartTotal),
+                  onTap: () => Navigator.of(context).pushNamed('/cart'),
                 ),
               ),
-            ),
-          ),
-          Expanded(child: _body(s)),
-        ],
+          ],
+        ),
       ),
-    );
-  }
-
-  Widget _body(Session s) {
-    if (loading) return const Center(child: CircularProgressIndicator());
-    if (error != null) {
-      return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Text(error!), const SizedBox(height: 8),
-        FilledButton(onPressed: load, child: const Text('Повторить')),
-      ]));
-    }
-    if (s.menuCache.isEmpty) {
-      return const Center(child: Text('Меню пустое — проверь стоп-лист'));
-    }
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-      itemCount: s.menuCache.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
-      itemBuilder: (_, i) => ProductCard(item: s.menuCache[i]),
     );
   }
 }
+

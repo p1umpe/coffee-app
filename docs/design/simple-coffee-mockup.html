@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Simple Coffee — макет приложения</title>
+<style>
+:root{--pg:#EDE3D6;--tx:#2B1D14;--mut:#7d6b5c;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--pg:#1a120c;--tx:#f3e9dd;--mut:#b09c8a}}
+:root[data-theme="dark"]{--pg:#1a120c;--tx:#f3e9dd;--mut:#b09c8a}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box;margin:0}
+body{background:var(--pg);color:var(--tx);font-family:"Manrope","Segoe UI",system-ui,sans-serif;padding:32px 16px 48px}
+h1{font-family:Georgia,"Times New Roman",serif;font-size:30px;text-align:center}
+.sub{text-align:center;color:var(--mut);font-size:14px;margin:6px auto 32px;max-width:560px;line-height:1.5}
+.row{display:flex;flex-wrap:wrap;gap:28px;justify-content:center}
+.col{display:flex;flex-direction:column;align-items:center;gap:10px}
+.cap{font-size:13px;color:var(--mut);font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+/* phone */
+.phone{--cream:#F7F0E6;--esp:#2B1D14;--car:#C8843B;--fox:#E2622B;--milk:#FFFBF5;--line:#E8DBCB;--m:#8a7766;
+width:300px;height:620px;background:var(--cream);color:var(--esp);border-radius:38px;border:9px solid #1c130d;position:relative;overflow:hidden;box-shadow:0 20px 40px rgba(43,29,20,.28);display:flex;flex-direction:column}
+.sb{display:flex;justify-content:space-between;padding:10px 20px 4px;font-size:11px;font-weight:700}
+.scr{flex:1;overflow:hidden;padding:6px 16px 0}
+.tabs{display:flex;justify-content:space-around;padding:8px 0 14px;background:var(--milk);border-top:1px solid var(--line);font-size:10px;color:var(--m);font-weight:600}
+.tabs div{text-align:center}.tabs b{display:block;font-size:17px;font-weight:400}.tabs .on{color:var(--fox)}
+h2{font-family:Georgia,serif;font-size:21px;line-height:1.15}
+.hi{display:flex;justify-content:space-between;align-items:center;margin:6px 0 12px}
+.av{width:34px;height:34px;border-radius:50%;background:var(--car);display:grid;place-items:center;font-size:17px}
+.card{background:var(--esp);color:#F7F0E6;border-radius:22px;padding:16px;position:relative}
+.card small{opacity:.7;font-size:11px}
+.stamps{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0 10px}
+.st{aspect-ratio:1;border-radius:50%;border:1.5px dashed rgba(247,240,230,.35);display:grid;place-items:center;font-size:16px}
+.st.f{background:var(--fox);border:none}
+.hint{display:flex;gap:6px;font-size:10.5px;line-height:1.35}
+.hint span{background:rgba(255,255,255,.1);border-radius:10px;padding:6px 8px;flex:1}
+.promo{margin-top:12px;border-radius:20px;padding:14px;background:linear-gradient(135deg,#C8843B,#E2622B);color:#fff;display:flex;justify-content:space-between;align-items:center}
+.promo p{font-size:12px;opacity:.9;margin-top:3px}.promo h3{font-family:Georgia,serif;font-size:16px;line-height:1.2}
+.promo i{font-size:34px;font-style:normal}
+.sec{display:flex;justify-content:space-between;margin:14px 0 8px;font-weight:700;font-size:14px}.sec span{color:var(--fox);font-size:12px}
+.cats{display:flex;gap:8px;overflow:hidden}
+.cat{background:var(--milk);border:1px solid var(--line);border-radius:16px;padding:10px 0;text-align:center;font-size:10px;font-weight:600;flex:1}.cat b{display:block;font-size:20px;font-weight:400;margin-bottom:2px}
+.chips{display:flex;gap:6px;margin:10px 0;overflow:hidden;white-space:nowrap}
+.chip{padding:7px 12px;border-radius:14px;background:var(--milk);border:1px solid var(--line);font-size:11px;font-weight:600}.chip.on{background:var(--esp);color:#F7F0E6;border-color:var(--esp)}
+.item{display:flex;gap:12px;align-items:center;background:var(--milk);border:1px solid var(--line);border-radius:20px;padding:10px;margin-bottom:9px}
+.ph{width:58px;height:58px;border-radius:16px;display:grid;place-items:center;font-size:28px;background:#EBD9C1;flex:none}
+.item div{flex:1}.item h4{font-size:13px}.item p{font-size:10.5px;color:var(--m);margin-top:2px}
+.pr{font-weight:800;font-size:13px}.plus{width:26px;height:26px;border-radius:50%;background:var(--fox);color:#fff;display:grid;place-items:center;font-weight:700;margin-top:4px;margin-left:auto}
+.hero{height:150px;border-radius:26px;background:#EBD9C1;display:grid;place-items:center;font-size:84px;margin:6px 0 12px}
+.seg{display:flex;background:var(--milk);border:1px solid var(--line);border-radius:16px;padding:4px;margin:8px 0}
+.seg div{flex:1;text-align:center;padding:9px 4px;border-radius:12px;font-size:11px;font-weight:700;line-height:1.3}.seg small{display:block;font-weight:500;font-size:9.5px;color:var(--m)}
+.seg .on{background:var(--esp);color:#F7F0E6}.seg .on small{color:#d8c8b6}
+.sz{display:flex;gap:8px}.sz div{flex:1;text-align:center;border:1.5px solid var(--line);border-radius:14px;padding:8px 0;font-size:11px;font-weight:700}.sz .on{border-color:var(--fox);color:var(--fox);background:#fff1ea}
+.cta{position:absolute;left:14px;right:14px;bottom:70px;background:var(--fox);color:#fff;border-radius:20px;padding:14px 18px;display:flex;justify-content:space-between;font-weight:800;font-size:14px;box-shadow:0 8px 18px rgba(226,98,43,.4)}
+.map{height:190px;border-radius:24px;background:#E6D8C4;position:relative;overflow:hidden;margin:8px 0 10px;
+background-image:linear-gradient(#d9c8b0 2px,transparent 2px),linear-gradient(90deg,#d9c8b0 2px,transparent 2px);background-size:46px 46px}
+.pin{position:absolute;width:28px;height:28px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--fox);display:grid;place-items:center;border:2px solid #fff}.pin:after{content:"";width:8px;height:8px;background:#fff;border-radius:50%}
+.shop{background:var(--milk);border:1px solid var(--line);border-radius:18px;padding:11px 12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+.shop h4{font-size:13px}.shop p{font-size:10.5px;color:var(--m);margin-top:2px}.ok{font-size:10px;font-weight:700;color:#5f7a4f;background:#e6efdc;padding:4px 8px;border-radius:10px;white-space:nowrap}
+.note{text-align:center;color:var(--mut);font-size:12px;margin-top:36px;line-height:1.6}
+</style>
+</head>
+<body>
+<h1>Simple Coffee 🦊</h1>
+<p class="sub">Первый макет мобильного приложения: заказ без очереди и лояльность «в кружке — печать, с собой — дешевле».</p>
+
+<div class="row">
+
+<div class="col"><div class="cap">Главная</div>
+<div class="phone"><div class="sb"><span>9:41</span><span>●●● 100%</span></div>
+<div class="scr">
+<div class="hi"><div><small style="color:var(--m);font-size:11px">Доброе утро</small><h2>Привет, Алексей!</h2></div><div class="av">🦊</div></div>
+<div class="card"><small>Твоя карта</small><div style="font-weight:800;font-size:15px">5 из 8 печатей</div>
+<div class="stamps"><div class="st f">☕</div><div class="st f">☕</div><div class="st f">☕</div><div class="st f">☕</div><div class="st f">☕</div><div class="st"></div><div class="st"></div><div class="st">🎁</div></div>
+<div class="hint"><span>☕ В кружке — печать</span><span>🥡 С собой — дешевле</span></div></div>
+<div class="promo"><div><h3>Осень уютнее<br>с сезонными чаями</h3><p>Новинки меню</p></div><i>🍵</i></div>
+<div class="sec">Категории<span>Всё меню</span></div>
+<div class="cats"><div class="cat"><b>☕</b>Кофе</div><div class="cat"><b>🥐</b>Выпечка</div><div class="cat"><b>🍰</b>Десерты</div><div class="cat"><b>🍳</b>Завтраки</div></div>
+</div>
+<div class="tabs"><div class="on"><b>⌂</b>Главная</div><div><b>☕</b>Меню</div><div><b>⌖</b>Кофейни</div><div><b>◔</b>Профиль</div></div></div></div>
+
+<div class="col"><div class="cap">Меню</div>
+<div class="phone"><div class="sb"><span>9:41</span><span>●●● 100%</span></div>
+<div class="scr">
+<h2 style="margin:6px 0 4px">Меню</h2><small style="font-size:11px;color:var(--m)">Кофейня на Вайнера, 9</small>
+<div class="chips"><div class="chip on">Кофе</div><div class="chip">Чай</div><div class="chip">Выпечка</div><div class="chip">Десерты</div></div>
+<div class="item"><div class="ph">☕</div><div><h4>Латте</h4><p>Эспрессо, молоко</p></div><div><div class="pr">260 ₽</div><div class="plus">+</div></div></div>
+<div class="item"><div class="ph">🥛</div><div><h4>Флэт уайт</h4><p>Двойной эспрессо</p></div><div><div class="pr">240 ₽</div><div class="plus">+</div></div></div>
+<div class="item"><div class="ph">🍫</div><div><h4>Мокка</h4><p>Шоколад, эспрессо</p></div><div><div class="pr">290 ₽</div><div class="plus">+</div></div></div>
+<div class="item"><div class="ph">🥐</div><div><h4>Круассан</h4><p>Сливочное масло</p></div><div><div class="pr">190 ₽</div><div class="plus">+</div></div></div>
+</div>
+<div class="tabs"><div><b>⌂</b>Главная</div><div class="on"><b>☕</b>Меню</div><div><b>⌖</b>Кофейни</div><div><b>◔</b>Профиль</div></div></div></div>
+
+<div class="col"><div class="cap">Заказ напитка</div>
+<div class="phone"><div class="sb"><span>9:41</span><span>●●● 100%</span></div>
+<div class="scr">
+<div class="hero">☕</div>
+<h2>Латте</h2><p style="font-size:11.5px;color:var(--m);margin:3px 0 8px">Нежный эспрессо с бархатным молоком</p>
+<div class="sz"><div>S 250 мл</div><div class="on">M 350 мл</div><div>L 450 мл</div></div>
+<div class="seg"><div class="on">В кружке<small>+1 печать</small></div><div>С собой<small>дешевле на 10 ₽</small></div></div>
+<div style="font-size:11px;color:var(--m);margin-top:10px">Молоко: обычное · Сироп: без</div>
+</div>
+<div class="cta"><span>Добавить</span><span>260 ₽</span></div>
+<div class="tabs" style="margin-top:auto"><div><b>⌂</b>Главная</div><div class="on"><b>☕</b>Меню</div><div><b>⌖</b>Кофейни</div><div><b>◔</b>Профиль</div></div></div></div>
+
+<div class="col"><div class="cap">Кофейни</div>
+<div class="phone"><div class="sb"><span>9:41</span><span>●●● 100%</span></div>
+<div class="scr">
+<h2 style="margin:6px 0 2px">Кофейни</h2><small style="font-size:11px;color:var(--m)">Екатеринбург</small>
+<div class="map"><div class="pin" style="left:60px;top:40px"></div><div class="pin" style="left:170px;top:90px"></div><div class="pin" style="left:220px;top:30px"></div></div>
+<div class="shop"><div><h4>Вайнера, 9</h4><p>300 м · до 22:00</p></div><span class="ok">Открыто</span></div>
+<div class="shop"><div><h4>Ленина, 24</h4><p>650 м · до 21:00</p></div><span class="ok">Открыто</span></div>
+<div class="shop"><div><h4>Малышева, 51</h4><p>1,2 км · до 22:00</p></div><span class="ok">Открыто</span></div>
+</div>
+<div class="tabs"><div><b>⌂</b>Главная</div><div><b>☕</b>Меню</div><div class="on"><b>⌖</b>Кофейни</div><div><b>◔</b>Профиль</div></div></div></div>
+
+</div>
+<p class="note">Тексты, цены, адреса и число печатей — примерные, для оценки стиля.<br>Палитра: эспрессо, сливки, карамель и оранжевый лисёнок.</p>
+</body>
+</html>

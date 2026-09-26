@@ -2,7 +2,6 @@
 node_modules/
 .dart_tool/
 .build/
-pubspec.lock
 
 # Build output
 services/api/dist/
@@ -11,7 +10,7 @@ apps/mobile/.dart_tool/
 *.g.dart
 *.freezed.dart
 
-# Env & secrets — никогда не коммитим боевые ключи
+# Env & secrets
 services/api/.env
 *.pem
 *.key
@@ -28,3 +27,9 @@ pgdata/
 # Flutter
 .flutter-plugins
 .flutter-plugins-dependencies
+apps/mobile/.metadata
+# сгенерированные платформой файлы macos/web коммитим осознанно (нужны для сборки),
+# кроме локальных артефактов:
+macos/Flutter/GeneratedPluginRegistrant.swift
+macos/Flutter/Flutter-Debug.xcconfig
+macos/Flutter/Flutter-Release.xcconfig

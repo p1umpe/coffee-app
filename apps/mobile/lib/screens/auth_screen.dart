@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:dio/dio.dart';
 import '../core/session.dart';
-import '../theme/app_theme.dart';
+import '../theme/app_tokens.dart';
+import '../widgets/common.dart';
 
-/// Вход по телефону: запросить OTP -> ввести код (в dev код виден в API) -> JWT.
+/// Вход по телефону в токенах спеки: serif-заголовок, milk-поля, fox-CTA.
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
   @override
@@ -23,16 +24,20 @@ class _AuthScreenState extends State<AuthScreen> {
     final s = context.read<Session>();
     setState(() { busy = true; error = null; });
     try {
-      final r = await s.api.dio.post('/auth/otp/request', data: {'phone': phoneCtl.text});
+      final r = await s.api.dio
+          .post('/auth/otp/request', data: {'phone': phoneCtl.text});
       setState(() {
         codeSent = true;
         devCode = r.data['devCode']?.toString();
         if (devCode != null) codeCtl.text = devCode!;
       });
     } on DioException catch (e) {
-      setState(() => error = e.response?.data?['message']?.toString() ?? 'Нет связи с API :3000. Проверь, что бэк запущен.');
+      final msg = e.response?.data?['message'];
+      setState(() => error = msg is String
+          ? msg
+          : 'Нет связи с API :3000. Проверь, что бэк запущен.');
     } finally {
-      setState(() => busy = false);
+      if (mounted) setState(() => busy = false);
     }
   }
 
@@ -42,12 +47,15 @@ class _AuthScreenState extends State<AuthScreen> {
     try {
       final r = await s.api.dio.post('/auth/otp/verify',
           data: {'phone': phoneCtl.text, 'code': codeCtl.text.trim()});
-      s.phone = phoneCtl.text;
-      s.applyUser(Map<String, dynamic>.from(r.data['user'] as Map), r.data['accessToken'] as String);
+      s.applyUser(Map<String, dynamic>.from(r.data['user'] as Map),
+          r.data['accessToken'] as String,
+          phone: phoneCtl.text);
     } on DioException catch (e) {
-      setState(() => error = e.response?.data?['message']?.toString() ?? 'Неверный код');
+      final msg = e.response?.data?['message'];
+      setState(
+          () => error = msg is String ? msg : 'Неверный код');
     } finally {
-      setState(() => busy = false);
+      if (mounted) setState(() => busy = false);
     }
   }
 
@@ -56,46 +64,74 @@ class _AuthScreenState extends State<AuthScreen> {
     return Scaffold(
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.fromLTRB(16, 40, 16, 16),
           children: [
-            const SizedBox(height: 40),
             const Text('🦊', style: TextStyle(fontSize: 56)),
             const SizedBox(height: 8),
-            const Text('Simple Coffee', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: SCColors.espresso)),
-            const Text('Заказ без очереди. В кружке — печати, с собой — дешевле.',
-                style: TextStyle(color: SCColors.secondary, fontSize: 15)),
+            Text('Simple Coffee', style: serif(28)),
+            Text('Заказ без очереди. В кружке — печати, с собой — дешевле.',
+                style: sans(15, c: SCColors.muted)),
             const SizedBox(height: 28),
-            TextField(
-              controller: phoneCtl,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(labelText: 'Телефон', border: OutlineInputBorder(), prefixText: ''),
-            ),
+            _field(phoneCtl, 'Телефон', TextInputType.phone),
             const SizedBox(height: 12),
             if (!codeSent)
-              FilledButton(onPressed: busy ? null : request, child: Text(busy ? 'Отправляю…' : 'Получить код')),
+              CtaButton(
+                  left: busy ? 'Отправляю…' : 'Получить код',
+                  right: '→',
+                  onTap: busy ? null : request),
             if (codeSent) ...[
-              TextField(
-                controller: codeCtl,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: 'Код из SMS',
-                  border: const OutlineInputBorder(),
-                  helperText: devCode != null ? 'dev-режим: код $devCode (подставился сам)' : null,
+              _field(codeCtl, 'Код из SMS', TextInputType.number,
+                  helper: devCode != null
+                      ? 'dev-режим: код $devCode (подставился сам)'
+                      : null),
+              const SizedBox(height: 12),
+              CtaButton(
+                  left: busy ? 'Проверяю…' : 'Войти',
+                  right: '→',
+                  onTap: busy ? null : verify),
+              const SizedBox(height: 4),
+              Center(
+                child: GestureDetector(
+                  onTap: busy ? null : request,
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Text('Запросить код ещё раз',
+                        style: sans(12,
+                            w: FontWeight.w600, c: SCColors.fox)),
+                  ),
                 ),
               ),
-              const SizedBox(height: 12),
-              FilledButton(onPressed: busy ? null : verify, child: Text(busy ? 'Проверяю…' : 'Войти')),
-              TextButton(onPressed: busy ? null : request, child: const Text('Запросить код ещё раз')),
             ],
             if (error != null) ...[
               const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: const Color(0xFFFDECEA), borderRadius: BorderRadius.circular(12)),
-                child: Text(error!, style: const TextStyle(color: Color(0xFF9A3412))),
-              ),
+              NetErrorBanner(onRetry: codeSent ? verify : request),
             ],
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _field(TextEditingController c, String label,
+      TextInputType type, {String? helper}) {
+    return TextField(
+      controller: c,
+      keyboardType: type,
+      style: sans(14),
+      decoration: InputDecoration(
+        labelText: label,
+        helperText: helper,
+        filled: true,
+        fillColor: SCColors.milk,
+        labelStyle: sans(12, c: SCColors.muted),
+        helperStyle: sans(11, c: SCColors.muted),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: SCColors.line),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: SCColors.fox, width: 1.5),
         ),
       ),
     );

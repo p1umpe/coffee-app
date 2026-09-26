@@ -3,9 +3,11 @@ import 'package:provider/provider.dart';
 import 'package:dio/dio.dart';
 import 'package:uuid/uuid.dart';
 import '../core/session.dart';
-import '../theme/app_theme.dart';
+import '../theme/app_tokens.dart';
+import '../widgets/common.dart';
+import '../widgets/product_widgets.dart';
 
-/// Корзина: итог зависит от режима, создание заказа с idempotencyKey.
+/// Корзина: список, OrderTypeSwitch, CTA «Заказать», результат/ошибка.
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
   @override
@@ -32,16 +34,23 @@ class _CartScreenState extends State<CartScreen> {
             .toList(),
       });
       final d = r.data as Map<String, dynamic>;
-      setState(() {
-        result =
-            'Заказ ${d['number']} создан! Готовность ~${d['etaMin'] ?? 7} мин. Покажи QR из вкладки «Печати» бариста, чтобы получить ${d['stampsEarned']} печати 🦊';
-      });
+      if (mounted) {
+        setState(() {
+          result = 'Заказ ${d['number']} создан! ~${d['etaMin'] ?? 7} мин. '
+              'Покажи QR из Профиля — получишь ${d['stampsEarned']} печати 🦊';
+        });
+      }
       s.clearCart();
       await s.refreshLoyalty();
     } on DioException catch (e) {
-      setState(() => error = e.response?.data?['message']?.toString() ?? 'Не получилось создать заказ');
+      final msg = e.response?.data?['message'];
+      if (mounted) {
+        setState(() => error = msg is String
+            ? msg
+            : 'Бэк недоступен — повтори, когда появится сеть 🦊');
+      }
     } finally {
-      setState(() => busy = false);
+      if (mounted) setState(() => busy = false);
     }
   }
 
@@ -50,97 +59,107 @@ class _CartScreenState extends State<CartScreen> {
     final s = context.watch<Session>();
     final items = s.cart.entries.toList();
     return Scaffold(
-      appBar: AppBar(title: const Text('Твой заказ')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(s.shopName, style: const TextStyle(fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 4),
-                  Text(
-                    s.fulfillment == Fulfillment.dineIn
-                        ? 'В кружке 🍵 · подадим в зале · +${s.cartStampsDue} печати'
-                        : 'С собой 🥤 · дешевле · без печатей',
-                    style: const TextStyle(color: SCColors.secondary),
-                  ),
-                ],
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+          children: [
+            Text('Корзина', style: serif(21)),
+            Text('Кофейня на ${s.shopName}',
+                style: sans(11, c: SCColors.muted)),
+            const SizedBox(height: 10),
+            if (items.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: SCColors.milk,
+                  borderRadius:
+                      BorderRadius.circular(SCRadii.productCard),
+                  border: Border.all(color: SCColors.line),
+                ),
+                child: Text(
+                    'Пока тут пусто, но капучино уже скучает 🦊\nДобавь что-нибудь во вкладке «Меню».',
+                    style: sans(13)),
               ),
+            for (final e in items) ...[
+              _row(s, e.key, e.value),
+              const SizedBox(height: 8),
+            ],
+            if (items.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              const OrderTypeSwitch(),
+              const SizedBox(height: 6),
+              Text(
+                s.fulfillment == Fulfillment.dineIn
+                    ? 'Подадим в зале · +${s.cartStampsDue} печати'
+                    : 'С собой · дешевле · без печатей',
+                style: sans(11, c: SCColors.muted),
+              ),
+              const SizedBox(height: 12),
+              CtaButton(
+                left: busy ? 'Создаём заказ…' : 'Заказать · ~7 мин',
+                right: rub(s.cartTotal),
+                onTap: busy ? null : checkout,
+              ),
+            ],
+            if (result != null) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                    color: SCColors.okBg,
+                    borderRadius: BorderRadius.circular(14)),
+                child: Text(result!,
+                    style: sans(12.5, c: SCColors.okText)),
+              ),
+            ],
+            if (error != null) ...[
+              const SizedBox(height: 12),
+              NetErrorBanner(onRetry: checkout),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _row(Session s, String id, int qty) {
+    final found = s.menuCache.where((x) => x.id == id);
+    final title = found.isEmpty ? id : found.first.title;
+    final price = found.isEmpty ? 0 : s.priceOf(found.first);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: SCColors.milk,
+        borderRadius: BorderRadius.circular(SCRadii.productCard),
+        border: Border.all(color: SCColors.line),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: sans(13, w: FontWeight.w700)),
+                Text('${rub(price)} × $qty',
+                    style: sans(11, c: SCColors.muted)),
+              ],
             ),
           ),
-          const SizedBox(height: 12),
-          if (items.isEmpty)
-            const Card(
-              child: Padding(
-                padding: EdgeInsets.all(20),
-                child: Text('Пока тут пусто, но капучино уже скучает 🦊\nДобавь что-нибудь во вкладке «Меню».'),
-              ),
+          GestureDetector(
+            onTap: () => s.remove(id),
+            child: const Padding(
+              padding: EdgeInsets.all(6),
+              child: Icon(Icons.remove_circle_outline, size: 22),
             ),
-          for (final e in items)
-            Builder(builder: (_) {
-              final found = s.menuCache.where((x) => x.id == e.key);
-              final title = found.isEmpty ? e.key : found.first.title;
-              final price = found.isEmpty
-                  ? 0
-                  : (s.fulfillment == Fulfillment.dineIn
-                      ? found.first.dineInPrice
-                      : found.first.takeawayPrice);
-              return Card(
-                child: ListTile(
-                  title: Text(title),
-                  subtitle: Text('${rub(price)} × ${e.value}'),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(onPressed: () => s.remove(e.key), icon: const Icon(Icons.remove_circle_outline)),
-                      Text('${e.value}', style: const TextStyle(fontWeight: FontWeight.w800)),
-                      IconButton(onPressed: () => s.add(e.key), icon: const Icon(Icons.add_circle)),
-                    ],
-                  ),
-                ),
-              );
-            }),
-          const SizedBox(height: 12),
-          if (items.isNotEmpty)
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                  children: [
-                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                      const Text('Итого', style: TextStyle(fontWeight: FontWeight.w700)),
-                      Text(rub(s.cartTotal), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
-                    ]),
-                    const SizedBox(height: 12),
-                    FilledButton(
-                      onPressed: busy ? null : checkout,
-                      child: Text(busy ? 'Создаём заказ…' : 'Заказать · забрать через ~7 мин'),
-                    ),
-                  ],
-                ),
-              ),
+          ),
+          Text('$qty', style: sans(14, w: FontWeight.w800)),
+          GestureDetector(
+            onTap: () => s.add(id),
+            child: const Padding(
+              padding: EdgeInsets.all(6),
+              child: Icon(Icons.add_circle, size: 22, color: SCColors.fox),
             ),
-          if (result != null) ...[
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(color: const Color(0xFFEAF5EA), borderRadius: BorderRadius.circular(14)),
-              child: Text(result!, style: const TextStyle(color: Color(0xFF2F6B2F))),
-            ),
-          ],
-          if (error != null) ...[
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(color: const Color(0xFFFDECEA), borderRadius: BorderRadius.circular(14)),
-              child: Text(error!),
-            ),
-          ],
-          const SizedBox(height: 80),
+          ),
         ],
       ),
     );
