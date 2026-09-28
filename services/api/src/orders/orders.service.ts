@@ -20,7 +20,8 @@ export class OrdersService {
     });
     if (!link || link.inStopList || !link.product.isActive) throw new BadRequestException(`product ${productId} unavailable`);
     const dineIn = link.dineInPrice ?? link.product.dineInPrice;
-    const takeaway = link.takeawayPrice ?? Math.max(0, dineIn - discount);
+    const takeaway = link.takeawayPrice
+      ?? (link.product.givesStamp ? Math.max(0, dineIn - discount) : dineIn);
     return { dineIn, price: fulfillment === 'DINE_IN' ? dineIn : takeaway, givesStamp: link.product.givesStamp };
   }
 

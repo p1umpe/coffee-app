@@ -23,6 +23,26 @@ enum OrderStatus {
   REFUNDED
 }
 
+enum PaymentMethod {
+  CARD
+  SBP
+  COUPON
+  CASH_DESK
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+enum StaffRole {
+  BARISTA
+  MANAGER
+  ADMIN
+}
+
 model Shop {
   id        String        @id @default(cuid())
   name      String
@@ -36,6 +56,7 @@ model Shop {
   iikoId    String?       @unique
   products  ShopProduct[]
   orders    Order[]
+  staff     Staff[]
   createdAt DateTime      @default(now())
 }
 
@@ -87,22 +108,50 @@ model User {
   createdAt DateTime @default(now())
 }
 
+model Staff {
+  id         String    @id @default(cuid())
+  login      String    @unique
+  pinHash    String
+  name       String?
+  role       StaffRole @default(BARISTA)
+  shopId     String?
+  shop       Shop?     @relation(fields: [shopId], references: [id])
+  isActive   Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+}
+
 model Order {
-  id             String      @id @default(cuid())
-  number         String      @unique
+  id             String        @id @default(cuid())
+  number         String        @unique
   shopId         String
-  shop           Shop        @relation(fields: [shopId], references: [id])
+  shop           Shop          @relation(fields: [shopId], references: [id])
   userId         String?
-  user           User?       @relation(fields: [userId], references: [id])
+  user           User?         @relation(fields: [userId], references: [id])
   fulfillment    Fulfillment
-  status         OrderStatus @default(PENDING_PAYMENT)
-  idempotencyKey String      @unique
+  status         OrderStatus   @default(PENDING_PAYMENT)
+  idempotencyKey String        @unique
   items          Json
   total          Int
-  stampsEarned   Int         @default(0)
+  stampsEarned   Int           @default(0)
   iikoOrderId    String?
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
+  payments       Payment[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  orderId       String
+  order         Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  method        PaymentMethod
+  status        PaymentStatus @default(PENDING)
+  amount        Int
+  provider      String        @default("mock")
+  providerPayId String?
+  idempotencyKey String       @unique
+  raw           Json?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 }
 
 model Coupon {

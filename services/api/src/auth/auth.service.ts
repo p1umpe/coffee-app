@@ -1,5 +1,6 @@
 import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 
 // MVP: OTP dev-mode — код возвращаем в ответе (в проде заменить на SMS-провайдера).
@@ -41,5 +42,27 @@ export class AuthService {
     await this.prisma.otpCode.deleteMany({ where: { phone: clean } });
     const accessToken = await this.jwt.signAsync({ sub: user.id, phone: user.phone });
     return { accessToken, user: { id: user.id, phone: user.phone, guestQr: user.guestQr, stamps: user.stamps } };
+  }
+  // --- Персонал: вход по PIN в том же приложении (режим КДС) ---
+  // PIN храним только как bcrypt-хэш. Роль кладём в JWT: role=staff.
+  async staffLogin(login: string, pin: string) {
+    const staff = await this.prisma.staff.findUnique({ where: { login } });
+    if (!staff || !staff.isActive) throw new UnauthorizedException('bad credentials');
+    const ok = await bcrypt.compare(pin, staff.pinHash);
+    if (!ok) throw new UnauthorizedException('bad credentials');
+    const accessToken = await this.jwt.signAsync({
+      sub: staff.id, role: 'staff', staffRole: staff.role, shopId: staff.shopId,
+    });
+    return {
+      accessToken,
+      staff: { id: staff.id, login: staff.login, name: staff.name, role: staff.role, shopId: staff.shopId },
+    };
+  }
+
+  async changeStaffPin(staffId: string, newPin: string) {
+    if (!/^\d{4,8}$/.test(newPin)) throw new BadRequestException('pin must be 4-8 digits');
+    const pinHash = await bcrypt.hash(newPin, 10);
+    await this.prisma.staff.update({ where: { id: staffId }, data: { pinHash } });
+    return { ok: true };
   }
 }

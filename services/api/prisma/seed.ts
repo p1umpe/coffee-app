@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
+import * as bcrypt from 'bcryptjs';
 
-// Сид для локальной разработки: 1 кофейня, категории как на сайте, 6 товаров.
+// Сид: 1 кофейня, категории, 6 товаров + тестовый бариста (login barista1 / PIN 1234).
 const prisma = new PrismaClient();
 async function main() {
   const shop = await prisma.shop.upsert({
@@ -39,5 +40,12 @@ async function main() {
     });
   }
   console.log('seed ok, shopId =', shop.id);
+  const pinHash = await bcrypt.hash('1234', 10);
+  await prisma.staff.upsert({
+    where: { login: 'barista1' },
+    update: { pinHash, shopId: shop.id },
+    create: { login: 'barista1', pinHash, name: 'Бариста Лена', role: 'BARISTA', shopId: shop.id },
+  });
+  console.log('staff seeded: barista1 / 1234');
 }
 main().finally(() => prisma.$disconnect());

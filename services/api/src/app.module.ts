@@ -7,6 +7,8 @@ import { CatalogModule } from './catalog/catalog.module';
 import { OrdersModule } from './orders/orders.module';
 import { LoyaltyModule } from './loyalty/loyalty.module';
 import { IikoModule } from './iiko/iiko.module';
+import { PaymentsModule } from './payments/payments.module';
+import { KdsModule } from './kds/kds.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -19,6 +21,8 @@ import { HealthController } from './health.controller';
     OrdersModule,
     LoyaltyModule,
     IikoModule,
+    PaymentsModule,
+    KdsModule,
   ],
   controllers: [HealthController],
 })

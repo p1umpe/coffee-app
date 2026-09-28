@@ -16,7 +16,9 @@ export class CatalogController {
     });
     return links.map((l) => {
       const dineIn = l.dineInPrice ?? l.product.dineInPrice;
-      const takeaway = l.takeawayPrice ?? Math.max(0, dineIn - discount);
+      // Скидка −30 ₽ только на напитки (givesStamp=true). Еда — та же цена.
+      const takeaway = l.takeawayPrice
+        ?? (l.product.givesStamp ? Math.max(0, dineIn - discount) : dineIn);
       return {
         id: l.product.id,
         title: l.product.title,

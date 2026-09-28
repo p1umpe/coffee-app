@@ -161,7 +161,8 @@ class MenuItem {
       MenuItem.fromJson({
         'id': 'mock-$t', 'title': t, 'description': d,
         'category': {'title': c}, 'dineInPrice': p,
-        'takeawayPrice': p - 1000, 'givesStamp': s, 'tags': [],
+        // Скидка −30 ₽ только на напитки (givesStamp). Еда — та же цена.
+        'takeawayPrice': s ? p - 3000 : p, 'givesStamp': s, 'tags': [],
       });
 }
 

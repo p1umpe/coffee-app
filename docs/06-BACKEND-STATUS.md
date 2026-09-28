@@ -1,13 +1,25 @@
-# Simple Coffee API — статус бэкенда (24.09.2026, проверено вживую)
+# Simple Coffee API — статус бэкенда (28.09.2026, v0.3, проверено вживую)
 
-Запущено и протестировано curl: Postgres+Redis в Docker, API :3000, Swagger /docs.
+## Что работает (API :3000)
 
-Проверенные сценарии:
 - OTP вход (devCode) -> JWT + guestQr ✅
-- Menu: dineInPrice/takeawayPrice (32000/29000), стоп-лист скрыт ✅
-- DINE_IN заказ 2 капучино: total 64000, stampsDue 2 ✅
-- stamp по QR: stamps=2, повтор отклонён ✅
-- TAKEAWAY: total 29000 (скидка 3000), stamp отклонён ✅
-- Идемпотентность: deduped=true ✅
+- Menu: напитки 32000/29000 (−30 ₽), еда без скидки (18000/18000), стоп-лист скрыт ✅
+- DINE_IN заказ: total 32000, stampsDue 1, статус PENDING_PAYMENT ✅
+- Оплата CARD: POST /payments -> PENDING -> POST /payments/:id/confirm -> SUCCEEDED, заказ PAID ✅
+- Идемпотентность платежей: повторный ключ возвращает тот же платёж ✅
+- КДС (staff JWT barista1/1234): feed, accept -> cooking -> ready ✅
+- Выдача в кружке: POST /kds/orders/:id/serve {guestQr} -> stamps=1, повтор отклонён ✅
+- Гость без staff-токена получает 401 на /kds ✅
 
-Тестовые ID (dev): shop=cmufoxdhd0000i0sbi70zckpi, user=cmufoxvoa0001jpllh13og8ic
+## Тестовые данные (dev)
+
+- shop=cmufoxdhd0000i0sbi70zckpi (Ленина, 1)
+- staff: login=barista1 / PIN=1234 (сидируется в prisma/seed.ts)
+- Механика: 6 печатей = купон на 7-й кофе (STAMPS_TO_FREE_CUP=6), TTL 30 дней
+- Скидка: TAKEAWAY_DISCOUNT=3000, только напитки (givesStamp=true)
+
+## Что дальше
+
+- Боевой PSP: заменить confirm на payUrl + webhook с подписью (место помечено TODO).
+- Push-уведомления о статусах (FCM/APNs).
+- Фронт: экран оплаты (CARD/SBP) + статус заказа + режим бариста по PIN.
