@@ -84,6 +84,17 @@ export class OrdersService {
   }
 
   get(id: string) { return this.prisma.order.findUnique({ where: { id } }); }
+  myOrders(userId: string, take = 20, skip = 0) {
+    const t = Math.min(Math.max(Number(take) || 20, 1), 50);
+    const s = Math.max(Number(skip) || 0, 0);
+    return this.prisma.order.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: t,
+      skip: s,
+      include: { shop: { select: { id: true, name: true, address: true } } },
+    });
+  }
   byShop(shopId: string) {
     return this.prisma.order.findMany({ where: { shopId }, orderBy: { createdAt: 'desc' }, take: 50 });
   }

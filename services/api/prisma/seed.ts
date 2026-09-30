@@ -40,6 +40,24 @@ async function main() {
     });
   }
   console.log('seed ok, shopId =', shop.id);
+  // Сид 2-й кофейни (task_0009): те же 6 товаров, Круассан в стоп-листе, Капучино дороже.
+  const shop2 = await prisma.shop.upsert({
+    where: { iikoId: 'demo-ekb-02' },
+    update: {},
+    create: { name: 'Simple Coffee — Вайнера', address: 'Екатеринбург, ул. Вайнера, 9', lat: 56.833, lon: 60.594, phone: '+7 (343) 000-00-01', iikoId: 'demo-ekb-02', isNew: true },
+  });
+  for (const it of items) {
+    const p = await prisma.product.findUnique({ where: { iikoId: `demo-${it.title}` } });
+    if (!p) continue;
+    const isCroissant = it.title === 'Круассан масляный';
+    const isCappuccino = it.title === 'Капучино';
+    await prisma.shopProduct.upsert({
+      where: { shopId_productId: { shopId: shop2.id, productId: p.id } },
+      update: { inStopList: isCroissant, dineInPrice: isCappuccino ? 35000 : null },
+      create: { shopId: shop2.id, productId: p.id, inStopList: isCroissant, dineInPrice: isCappuccino ? 35000 : null },
+    });
+  }
+  console.log('seed ok, shop2Id =', shop2.id);
   const pinHash = await bcrypt.hash('1234', 10);
   await prisma.staff.upsert({
     where: { login: 'barista1' },

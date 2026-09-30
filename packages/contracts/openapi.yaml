@@ -28,6 +28,15 @@ paths:
                 idempotencyKey: {type: string, format: uuid}
       responses:
         '201': {description: orderId, number (А-12), eta, status PENDING_PAYMENT}
+  /v1/orders/my:
+    get:
+      summary: Мои заказы (история гостя, desc, take<=50) — static route ДО /v1/orders/{id}
+      parameters:
+        - {name: userId, in: query, required: true, schema: {type: string}}
+        - {name: take, in: query, required: false, schema: {type: integer, default: 20, maximum: 50}}
+        - {name: skip, in: query, required: false, schema: {type: integer, default: 0}}
+      responses:
+        '200': {description: orders + shop {id,name,address}}
   /v1/payments:
     post:
       summary: Создать платёж (CARD | SBP | COUPON | CASH_DESK), идемпотентный
@@ -50,6 +59,14 @@ paths:
       summary: Мок-подтверждение эквайринга (в проде заменит webhook PSP). Заказ -> PAID
       responses:
         '200': {description: payment SUCCEEDED/FAILED}
+  /v1/payments/{id}/refund:
+    post:
+      summary: Возврат (мок, идемпотентный). 400 если PENDING/FAILED или заказ COOKING/READY/SERVED
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+      responses:
+        '200': {description: payment REFUNDED + order REFUNDED}
+        '400': {description: nothing to refund | too late}
   /v1/payments/webhook:
     post:
       summary: Webhook провайдера (подпись — при подключении боевого PSP)

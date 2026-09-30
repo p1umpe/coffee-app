@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:dio/dio.dart';
-import 'package:uuid/uuid.dart';
 import '../core/session.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/common.dart';
 import '../widgets/product_widgets.dart';
+import 'checkout_screen.dart';
 
 /// Корзина: список, OrderTypeSwitch, CTA «Заказать», результат/ошибка.
 class CartScreen extends StatefulWidget {
@@ -15,43 +14,10 @@ class CartScreen extends StatefulWidget {
 }
 
 class _CartScreenState extends State<CartScreen> {
-  bool busy = false;
-  String? result;
-  String? error;
-
-  Future<void> checkout() async {
-    final s = context.read<Session>();
-    if (s.shopId == null || s.userId == null || s.cart.isEmpty) return;
-    setState(() { busy = true; error = null; result = null; });
-    try {
-      final r = await s.api.dio.post('/orders', data: {
-        'shopId': s.shopId,
-        'fulfillment': s.fulfillment.api,
-        'userId': s.userId,
-        'idempotencyKey': const Uuid().v4(),
-        'items': s.cart.entries
-            .map((e) => {'productId': e.key, 'qty': e.value})
-            .toList(),
-      });
-      final d = r.data as Map<String, dynamic>;
-      if (mounted) {
-        setState(() {
-          result = 'Заказ ${d['number']} создан! ~${d['etaMin'] ?? 7} мин. '
-              'Покажи QR из Профиля — получишь ${d['stampsEarned']} печати 🦊';
-        });
-      }
-      s.clearCart();
-      await s.refreshLoyalty();
-    } on DioException catch (e) {
-      final msg = e.response?.data?['message'];
-      if (mounted) {
-        setState(() => error = msg is String
-            ? msg
-            : 'Бэк недоступен — повтори, когда появится сеть 🦊');
-      }
-    } finally {
-      if (mounted) setState(() => busy = false);
-    }
+  void goCheckout() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const CheckoutScreen()),
+    );
   }
 
   @override
@@ -96,25 +62,10 @@ class _CartScreenState extends State<CartScreen> {
               ),
               const SizedBox(height: 12),
               CtaButton(
-                left: busy ? 'Создаём заказ…' : 'Заказать · ~7 мин',
+                left: 'Перейти к оплате',
                 right: rub(s.cartTotal),
-                onTap: busy ? null : checkout,
+                onTap: goCheckout,
               ),
-            ],
-            if (result != null) ...[
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                    color: SCColors.okBg,
-                    borderRadius: BorderRadius.circular(14)),
-                child: Text(result!,
-                    style: sans(12.5, c: SCColors.okText)),
-              ),
-            ],
-            if (error != null) ...[
-              const SizedBox(height: 12),
-              NetErrorBanner(onRetry: checkout),
             ],
           ],
         ),

@@ -62,6 +62,25 @@ export class PaymentsService {
     return updated;
   }
 
+  // Возврат (мок): идемпотентно; запрет если кухня уже готовит/готово/выдано.
+  async refund(paymentId: string) {
+    const payment = await this.prisma.payment.findUnique({ where: { id: paymentId } });
+    if (!payment) throw new BadRequestException('unknown payment');
+    if (payment.status === 'REFUNDED') return payment; // идемпотентность
+    if (payment.status === 'PENDING' || payment.status === 'FAILED')
+      throw new BadRequestException('nothing to refund');
+
+    const order = await this.prisma.order.findUnique({ where: { id: payment.orderId } });
+    if (!order) throw new BadRequestException('unknown order');
+    if (['COOKING', 'READY', 'SERVED'].includes(order.status)) throw new BadRequestException('too late');
+
+    return this.prisma.$transaction(async (tx) => {
+      const p = await tx.payment.update({ where: { id: paymentId }, data: { status: 'REFUNDED' as any } });
+      await tx.order.update({ where: { id: payment.orderId }, data: { status: 'REFUNDED' as any } });
+      return p;
+    });
+  }
+
   // Webhook провайдера (подпись проверяем, когда подключим боевой PSP)
   async webhook(body: { providerPayId: string; status: string; paymentId?: string }) {
     if (body.paymentId) {

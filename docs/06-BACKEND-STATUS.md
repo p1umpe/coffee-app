@@ -17,6 +17,8 @@
 - staff: login=barista1 / PIN=1234 (сидируется в prisma/seed.ts)
 - Механика: 6 печатей = купон на 7-й кофе (STAMPS_TO_FREE_CUP=6), TTL 30 дней
 - Скидка: TAKEAWAY_DISCOUNT=3000, только напитки (givesStamp=true)
+- Возврат: POST /v1/payments/:id/refund (идемпотентный; 400 при PENDING/FAILED или COOKING/READY/SERVED) ✅
+- shop2=PENDING_DB (Вайнера, 9, iikoId demo-ekb-02; Круассан в стоп-листе, Капучино 35000) — ID подставится после migrate+seed на доступной БД
 
 ## Что дальше
 

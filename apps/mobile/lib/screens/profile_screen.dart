@@ -3,6 +3,9 @@ import 'package:provider/provider.dart';
 import '../core/session.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/stamp_shop.dart';
+import 'barista_screen.dart';
+import 'orders_history_screen.dart';
+import 'coupons_screen.dart';
 
 /// Профиль: приветствие + StampCard + QR гостя + выход.
 /// (Полноценная история заказов и детали печатей — по разделу 5 спеки, позже.)
@@ -112,6 +115,95 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                 ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            GestureDetector(
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                    builder: (_) => const CouponsScreen()),
+              ),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 13),
+                decoration: BoxDecoration(
+                  color: SCColors.milk,
+                  borderRadius:
+                      BorderRadius.circular(SCRadii.shopCard),
+                  border: Border.all(color: SCColors.line),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Text('Мои купоны',
+                            style: sans(13, w: FontWeight.w700)),
+                        const SizedBox(width: 6),
+                        if (s.coupons.isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 7, vertical: 2),
+                            decoration: const BoxDecoration(
+                                color: SCColors.fox,
+                                shape: BoxShape.circle),
+                            child: Text('${s.coupons.length}',
+                                style: sans(11,
+                                    w: FontWeight.w800,
+                                    c: Colors.white)),
+                          ),
+                      ],
+                    ),
+                    const Icon(Icons.chevron_right,
+                        size: 18, color: SCColors.muted),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            GestureDetector(
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                    builder: (_) => const OrdersHistoryScreen()),
+              ),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 13),
+                decoration: BoxDecoration(
+                  color: SCColors.milk,
+                  borderRadius:
+                      BorderRadius.circular(SCRadii.shopCard),
+                  border: Border.all(color: SCColors.line),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('История заказов',
+                        style: sans(13, w: FontWeight.w700)),
+                    const Icon(Icons.chevron_right,
+                        size: 18, color: SCColors.muted),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            GestureDetector(
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const BaristaScreen()),
+              ),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+                decoration: BoxDecoration(
+                  color: SCColors.espresso,
+                  borderRadius: BorderRadius.circular(SCRadii.shopCard),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Режим бариста', style: sans(13, w: FontWeight.w700, c: SCColors.cream)),
+                    const Text('🦊', style: TextStyle(fontSize: 16)),
+                  ],
+                ),
               ),
             ),
           ],

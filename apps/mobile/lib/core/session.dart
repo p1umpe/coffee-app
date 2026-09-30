@@ -115,16 +115,50 @@ class Session extends ChangeNotifier {
     notifyListeners();
   }
 
+  List<Coupon> coupons = [];
+  String? appliedCouponCode; // купон, выбранный для текущей корзины
+
+  void applyCoupon(String code) {
+    appliedCouponCode = code;
+    notifyListeners();
+  }
+
+  void clearCoupon() {
+    appliedCouponCode = null;
+    notifyListeners();
+  }
+
   Future<void> refreshLoyalty() async {
     if (userId == null) return;
     try {
       final r = await api.dio.get('/loyalty/me/$userId');
       stamps = (r.data['stamps'] as num).toInt();
+      final list = (r.data['coupons'] as List?) ?? [];
+      coupons = list
+          .map((e) => Coupon.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList();
+      // Сбросим применённый купон, если его больше нет / использован
+      if (appliedCouponCode != null &&
+          !coupons.any((c) => c.code == appliedCouponCode)) {
+        appliedCouponCode = null;
+      }
       notifyListeners();
     } on DioException {
       // офлайн — оставляем кэш
     }
   }
+}
+
+class Coupon {
+  final String code;
+  final DateTime expiresAt;
+  const Coupon({required this.code, required this.expiresAt});
+
+  Coupon.fromJson(Map<String, dynamic> j)
+      : code = j['code'] as String,
+        expiresAt = DateTime.parse(j['expiresAt'] as String);
+
+  int daysLeft(DateTime now) => expiresAt.difference(now).inDays;
 }
 
 class MenuItem {

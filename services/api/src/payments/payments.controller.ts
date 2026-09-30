@@ -19,8 +19,13 @@ export class PaymentsController {
   }
 
   // Мок-подтверждение эквайринга. В проде сюда придёт webhook провайдера.
-  @Post(':id/confirm') confirm(@Param('id') id: string, @Body() b: { ok?: boolean }) {
-    return this.payments.confirm(id, b.ok ?? true);
+  @Post(':id/confirm') confirm(@Param('id') id: string, @Body() b?: { ok?: boolean }) {
+    return this.payments.confirm(id, b?.ok ?? true);
+  }
+
+  // Возврат: идемпотентный; 400 если PENDING/FAILED или заказ уже COOKING/READY/SERVED
+  @Post(':id/refund') refund(@Param('id') id: string) {
+    return this.payments.refund(id);
   }
 
   @Post('webhook') webhook(@Body() b: { providerPayId: string; status: string; paymentId?: string }) {
