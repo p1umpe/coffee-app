@@ -4,6 +4,7 @@ import '../core/session.dart';
 import '../theme/app_tokens.dart';
 import '../widgets/common.dart';
 import '../widgets/stamp_shop.dart';
+import 'shop_details_screen.dart';
 
 /// Кофейни по спеке 3.4: заголовок + город, карта 190/r24 с пинами,
 /// ShopTile milk/r18 с плашкой Открыто/Закрыто.
@@ -103,15 +104,11 @@ class _ShopsScreenState extends State<ShopsScreen> {
                       .toString(),
                   open: (sh['open'] ?? true) as bool,
                   selected: s.shopId == sh['id'],
-                  onTap: () {
-                    s.setShop((sh['id'] ?? '').toString(),
-                        (sh['name'] ?? '').toString());
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                          content: Text(
-                              'Выбрана: ${sh['name']}. Меню обновится 🦊')),
-                    );
-                  },
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                        builder: (_) =>
+                            ShopDetailsScreen(shop: sh)),
+                  ),
                 ),
                 const SizedBox(height: 8),
               ],
