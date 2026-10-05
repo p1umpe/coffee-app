@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'theme/app_tokens.dart';
 import 'core/session.dart';
 import 'screens/auth_screen.dart';
+import 'screens/onboarding_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/menu_screen.dart';
 import 'screens/shops_screen.dart';
@@ -26,6 +27,7 @@ class SimpleCoffeeApp extends StatefulWidget {
 
 class _SimpleCoffeeAppState extends State<SimpleCoffeeApp> {
   int tab = 0;
+  bool onboardingDone = false;
 
   void openProduct(MenuItem item) {
     Navigator.of(context).push(
@@ -42,7 +44,11 @@ class _SimpleCoffeeAppState extends State<SimpleCoffeeApp> {
       title: 'Simple Coffee',
       theme: scTheme(),
       home: !session.loggedIn
-          ? const AuthScreen()
+          ? (onboardingDone
+              ? const AuthScreen()
+              : OnboardingScreen(
+                  onDone: () =>
+                      setState(() => onboardingDone = true)))
           : Scaffold(
               body: IndexedStack(
                 index: tab,
