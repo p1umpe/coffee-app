@@ -68,6 +68,10 @@ class _ProductScreenState extends State<ProductScreen> {
                 const SizedBox(height: 10),
                 Text('Молоко: обычное · Сироп: без',
                     style: sans(11, c: SCColors.muted)),
+                if (widget.item.kbju != null) ...[
+                  const SizedBox(height: 10),
+                  _KbjuCard(kbju: widget.item.kbju!),
+                ],
               ],
             ),
             Positioned(
@@ -89,6 +93,92 @@ class _ProductScreenState extends State<ProductScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Аккордеон КБЖУ (task_0014): скрыт, если kbju == null.
+/// Формат API: {kcal, protein, fat, carbs} — числа.
+class _KbjuCard extends StatefulWidget {
+  final Map<String, dynamic> kbju;
+  const _KbjuCard({required this.kbju});
+
+  @override
+  State<_KbjuCard> createState() => _KbjuCardState();
+}
+
+class _KbjuCardState extends State<_KbjuCard> {
+  bool open = false;
+
+  String fmt(String k) {
+    final v = widget.kbju[k];
+    if (v is int) return '$v';
+    if (v is double) return v.toStringAsFixed(v % 1 == 0 ? 0 : 1);
+    return v?.toString() ?? '—';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: SCColors.milk,
+        borderRadius: BorderRadius.circular(SCRadii.productCard),
+        border: Border.all(color: SCColors.line),
+      ),
+      child: Column(
+        children: [
+          GestureDetector(
+            onTap: () => setState(() => open = !open),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 14, vertical: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Состав и КБЖУ',
+                      style: sans(13, w: FontWeight.w700)),
+                  Row(
+                    children: [
+                      Text('${fmt('kcal')} ккал',
+                          style: sans(12, c: SCColors.muted)),
+                      const SizedBox(width: 4),
+                      Icon(
+                          open
+                              ? Icons.keyboard_arrow_up
+                              : Icons.keyboard_arrow_down,
+                          size: 18,
+                          color: SCColors.muted),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (open)
+            Padding(
+              padding:
+                  const EdgeInsets.fromLTRB(14, 0, 14, 12),
+              child: Row(
+                mainAxisAlignment:
+                    MainAxisAlignment.spaceBetween,
+                children: [
+                  _cell('Белки', fmt('protein')),
+                  _cell('Жиры', fmt('fat')),
+                  _cell('Углеводы', fmt('carbs')),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _cell(String l, String v) {
+    return Column(
+      children: [
+        Text(v, style: sans(14, w: FontWeight.w800)),
+        Text(l, style: sans(10.5, c: SCColors.muted)),
+      ],
     );
   }
 }

@@ -170,6 +170,7 @@ class MenuItem {
   final int takeawayPrice;
   final bool givesStamp;
   final List<String> tags;
+  final Map<String, dynamic>? kbju; // {kcal, protein, fat, carbs} — из API, может быть null
 
   MenuItem.fromJson(Map<String, dynamic> j)
       : id = j['id'] as String,
@@ -181,7 +182,10 @@ class MenuItem {
         dineInPrice = (j['dineInPrice'] as num).toInt(),
         takeawayPrice = (j['takeawayPrice'] as num).toInt(),
         givesStamp = (j['givesStamp'] as bool?) ?? false,
-        tags = ((j['tags'] as List?) ?? []).map((e) => e.toString()).toList();
+        tags = ((j['tags'] as List?) ?? []).map((e) => e.toString()).toList(),
+        kbju = (j['kbju'] is Map)
+            ? Map<String, dynamic>.from(j['kbju'] as Map)
+            : null;
 
   /// Мок для витрины, пока API пустое: цены как в макете.
   static List<MenuItem> mock() => [
