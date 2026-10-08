@@ -1,6 +1,11 @@
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto';
+class RateDto {
+  @IsInt() @Min(1) @Max(5) rating!: number;
+  @IsOptional() @IsString() comment?: string;
+}
 @Controller('orders')
 export class OrdersController {
   constructor(private orders: OrdersService) {}
@@ -10,4 +15,8 @@ export class OrdersController {
   @Get(':id') get(@Param('id') id: string) { return this.orders.get(id); }
   @Post(':id/cancel') cancel(@Param('id') id: string) { return this.orders.cancel(id); }
   @Post(':id/served') served(@Param('id') id: string) { return this.orders.markServed(id); }
+  // Оценка заказа (task_0012): 1-5 лисичек + комментарий, один раз (повтор перезаписывает)
+  @Post(':id/rate') rate(@Param('id') id: string, @Body() b: RateDto) {
+    return this.orders.rate(id, b.rating, b.comment);
+  }
 }

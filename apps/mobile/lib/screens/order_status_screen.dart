@@ -147,6 +147,13 @@ class _OrderStatusScreenState extends State<OrderStatusScreen> {
                 CtaButton(left: 'Я забрал', right: '›', onTap: () => setState(() => pickedUp = true))
               else if (pickedUp)
                 const _PickedBox(),
+              if (status == 'SERVED') ...[
+                const SizedBox(height: 12),
+                _RateCard(
+                  orderId: widget.orderId,
+                  rated: (order?['rating'] as num?)?.toInt(),
+                ),
+              ],
             ],
             if (error != null) ...[
               const SizedBox(height: 12),
@@ -209,10 +216,13 @@ class _ItemRow extends StatelessWidget {
     final pid = m['productId']?.toString() ?? '...';
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
-      child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Expanded(child: Text(pid, style: sans(12))),
-        Text('x$qty', style: sans(12, c: SCColors.muted)),
-      ]),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(child: Text(pid, style: sans(12))),
+          Text('x$qty', style: sans(12, c: SCColors.muted)),
+        ],
+      ),
     );
   }
 }
@@ -271,5 +281,127 @@ class _Step extends StatelessWidget {
       const SizedBox(height: 4),
       Text(label, textAlign: TextAlign.center, style: sans(10, w: current ? FontWeight.w800 : FontWeight.w600, c: (done || current) ? SCColors.espresso : SCColors.muted)),
     ]);
+  }
+}
+
+/// Оценка заказа (task_0012): 5 лисичек + комментарий, POST /orders/:id/rate.
+/// Показывается 1 раз на SERVED-заказ; если rating уже есть — «Спасибо!».
+class _RateCard extends StatefulWidget {
+  final String orderId;
+  final int? rated;
+  const _RateCard({required this.orderId, this.rated});
+
+  @override
+  State<_RateCard> createState() => _RateCardState();
+}
+
+class _RateCardState extends State<_RateCard> {
+  int stars = 0;
+  final commentCtrl = TextEditingController();
+  bool busy = false;
+  bool done = false;
+  String? error;
+
+  @override
+  void dispose() {
+    commentCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> send() async {
+    if (stars < 1 || busy) return;
+    setState(() { busy = true; error = null; });
+    try {
+      await context.read<Session>().api.dio.post(
+        '/orders/${widget.orderId}/rate',
+        data: {
+          'rating': stars,
+          if (commentCtrl.text.trim().isNotEmpty)
+            'comment': commentCtrl.text.trim(),
+        },
+      );
+      if (mounted) setState(() => done = true);
+    } on DioException catch (e) {
+      final msg = e.response?.data?['message'];
+      if (mounted) {
+        setState(() => error = msg is String ? msg : 'Не отправилось — попробуй позже');
+      }
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (done || (widget.rated != null && widget.rated! > 0)) {
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+            color: SCColors.okBg, borderRadius: BorderRadius.circular(14)),
+        child: Text('Спасибо за оценку! Приходи ещё 🦊',
+            style: sans(12.5, c: SCColors.okText, w: FontWeight.w700)),
+      );
+    }
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: SCColors.milk,
+        borderRadius: BorderRadius.circular(SCRadii.productCard),
+        border: Border.all(color: SCColors.line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Как тебе кофе? 🦊', style: sans(13, w: FontWeight.w700)),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(5, (i) {
+              final on = i < stars;
+              return GestureDetector(
+                onTap: busy ? null : () => setState(() => stars = i + 1),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Text(on ? '🦊' : '◯',
+                      style: TextStyle(fontSize: 30, color: on ? SCColors.fox : SCColors.line)),
+                ),
+              );
+            }),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: commentCtrl,
+            maxLines: 2,
+            maxLength: 500,
+            style: sans(13),
+            decoration: InputDecoration(
+              hintText: 'Комментарий (необязательно)',
+              hintStyle: sans(12, c: SCColors.muted),
+              filled: true,
+              fillColor: SCColors.cream,
+              counterText: '',
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: SCColors.line),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: SCColors.fox, width: 1.5),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          CtaButton(
+            left: busy ? 'Отправляем…' : 'Оценить',
+            right: stars > 0 ? '$stars/5' : '—',
+            onTap: busy || stars < 1 ? null : send,
+          ),
+          if (error != null) ...[
+            const SizedBox(height: 8),
+            Text(error!, style: sans(11.5, c: SCColors.muted)),
+          ],
+        ],
+      ),
+    );
   }
 }

@@ -110,4 +110,13 @@ export class OrdersService {
   async markServed(id: string) {
     return this.prisma.order.update({ where: { id }, data: { status: 'SERVED' } });
   }
+
+  // Оценка заказа (task_0012): только SERVED, 1-5, повтор перезаписывает
+  async rate(id: string, rating: number, comment?: string) {
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) throw new BadRequestException('rating 1-5');
+    const o = await this.prisma.order.findUnique({ where: { id } });
+    if (!o) throw new BadRequestException('not found');
+    if (o.status !== 'SERVED') throw new BadRequestException('rate only served orders');
+    return this.prisma.order.update({ where: { id }, data: { rating, ratingComment: comment?.slice(0, 500) ?? null } });
+  }
 }

@@ -133,6 +133,8 @@ model Order {
   items          Json
   total          Int
   stampsEarned   Int           @default(0)
+  rating       Int?
+  ratingComment String?
   iikoOrderId    String?
   payments       Payment[]
   createdAt      DateTime      @default(now())
