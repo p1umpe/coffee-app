@@ -105,6 +105,7 @@ model User {
   stamps    Int      @default(0)
   coupons   Coupon[]
   orders    Order[]
+  feedbacks Feedback[]
   createdAt DateTime @default(now())
 }
 
@@ -164,6 +165,23 @@ model Coupon {
   isUsed    Boolean  @default(false)
   expiresAt DateTime
   createdAt DateTime @default(now())
+}
+
+enum FeedbackTopic {
+  PRAISE
+  COMPLAINT
+  RENT
+  PARTNERSHIP
+}
+
+model Feedback {
+  id        String        @id @default(cuid())
+  userId    String?
+  user      User?         @relation(fields: [userId], references: [id])
+  topic     FeedbackTopic
+  text      String
+  contact   String?
+  createdAt DateTime      @default(now())
 }
 
 model OtpCode {

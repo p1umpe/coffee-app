@@ -6,6 +6,7 @@ import '../widgets/stamp_shop.dart';
 import 'barista_screen.dart';
 import 'orders_history_screen.dart';
 import 'coupons_screen.dart';
+import 'feedback_screen.dart';
 
 /// Профиль: приветствие + StampCard + QR гостя + выход.
 /// (Полноценная история заказов и детали печатей — по разделу 5 спеки, позже.)
@@ -179,6 +180,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text('История заказов',
+                        style: sans(13, w: FontWeight.w700)),
+                    const Icon(Icons.chevron_right,
+                        size: 18, color: SCColors.muted),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            GestureDetector(
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                    builder: (_) => const FeedbackScreen()),
+              ),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 13),
+                decoration: BoxDecoration(
+                  color: SCColors.milk,
+                  borderRadius:
+                      BorderRadius.circular(SCRadii.shopCard),
+                  border: Border.all(color: SCColors.line),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Напишите нам 💌',
                         style: sans(13, w: FontWeight.w700)),
                     const Icon(Icons.chevron_right,
                         size: 18, color: SCColors.muted),
