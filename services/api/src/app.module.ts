@@ -10,6 +10,7 @@ import { IikoModule } from './iiko/iiko.module';
 import { PaymentsModule } from './payments/payments.module';
 import { KdsModule } from './kds/kds.module';
 import { FeedbackModule } from './feedback/feedback.module';
+import { UsersModule } from './users/users.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -25,6 +26,7 @@ import { HealthController } from './health.controller';
     PaymentsModule,
     KdsModule,
     FeedbackModule,
+    UsersModule,
   ],
   controllers: [HealthController],
 })

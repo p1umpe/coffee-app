@@ -141,6 +141,13 @@ paths:
                 guestQr: {type: string}
       responses:
         '200': {description: ok, added, stamps, newCoupons}
+  /v1/users/me:
+    delete:
+      summary: Удаление аккаунта гостя (GDPR). Только guest JWT
+      responses:
+        '200': {description: '{ok:true}; OTP/купоны/фидбек удалены, заказы остались анонимными (userId=null)'}
+        '401': {description: no token | bad token}
+        '404': {description: user not found}
   /v1/iiko/webhook:
     post:
       summary: Webhook статусов кухни iiko → push гостю

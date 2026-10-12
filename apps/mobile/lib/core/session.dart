@@ -128,6 +128,17 @@ class Session extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Полный сброс сессии (удаление аккаунта / выход).
+  void logout() {
+    userId = null;
+    guestQr = null;
+    stamps = 0;
+    coupons = [];
+    cart.clear();
+    appliedCouponCode = null;
+    notifyListeners();
+  }
+
   Future<void> refreshLoyalty() async {
     if (userId == null) return;
     try {
