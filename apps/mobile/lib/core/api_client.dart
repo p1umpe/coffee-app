@@ -1,8 +1,12 @@
 import 'package:dio/dio.dart';
 
 /// HTTP-клиент к нашему NestJS API.
-/// iOS-симулятор: localhost ок. Android-эмулятор: замени на http://10.0.2.2:3000/v1
-const String kApiBase = 'http://localhost:3000/v1';
+/// --dart-define=API_BASE=http://192.168.0.5:3000/v1 — для реального телефона в той же Wi-Fi сети.
+/// Дефолт localhost — для iOS-симулятора/Chrome на том же Mac.
+const String kApiBase = String.fromEnvironment(
+  'API_BASE',
+  defaultValue: 'http://localhost:3000/v1',
+);
 
 class ApiClient {
   final Dio dio;

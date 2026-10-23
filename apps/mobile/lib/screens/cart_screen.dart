@@ -29,7 +29,13 @@ class _CartScreenState extends State<CartScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
           children: [
-            Text('Корзина', style: serif(21)),
+            Row(
+              children: [
+                const ScBackButton(),
+                const SizedBox(width: 10),
+                Text('Корзина', style: serif(21)),
+              ],
+            ),
             Text('Кофейня на ${s.shopName}',
                 style: sans(11, c: SCColors.muted)),
             const SizedBox(height: 10),

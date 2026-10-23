@@ -31,11 +31,26 @@ class _SimpleCoffeeAppState extends State<SimpleCoffeeApp> {
 
   void openProduct(MenuItem item) {
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => ProductScreen(item: item)),
+      MaterialPageRoute(
+          builder: (_) => ProductScreen(
+              item: item,
+              // Из карточки: в корзину и сразу показать корзину (п.1)
+              onAddedToCart: () {
+                Navigator.of(context).pop();
+                setState(() => tab = 4);
+              })),
     );
   }
 
   void goMenu() => setState(() => tab = 1);
+  void goMenuCategory(String category) {
+    final s = context.read<Session>();
+    if (category.isNotEmpty) s.setCategory(category);
+    setState(() => tab = 1);
+  }
+
+  void goCart() => setState(() => tab = 4);
+  void goProfile() => setState(() => tab = 3);
 
   @override
   Widget build(BuildContext context) {
@@ -53,8 +68,14 @@ class _SimpleCoffeeAppState extends State<SimpleCoffeeApp> {
               body: IndexedStack(
                 index: tab,
                 children: [
-                  HomeScreen(onOpenMenu: goMenu, onOpenProduct: openProduct),
-                  MenuScreen(onOpenProduct: openProduct),
+                  HomeScreen(
+                      onOpenMenu: goMenu,
+                      onOpenProduct: openProduct,
+                      onOpenCategory: goMenuCategory,
+                      onOpenProfile: goProfile),
+                  MenuScreen(
+                      onOpenProduct: openProduct,
+                      onOpenCart: goCart),
                   const ShopsScreen(),
                   const ProfileScreen(),
                   const CartScreen(),

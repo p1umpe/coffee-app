@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/session.dart';
 import '../theme/app_tokens.dart';
+import '../widgets/common.dart';
 import 'auth_screen.dart';
 
 /// Настройки (task_0015): кофейня, локальные тумблеры пушей, о приложении, удаление аккаунта.
@@ -83,10 +84,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     final s = context.watch<Session>();
     return Scaffold(
-      appBar: AppBar(title: Text('Настройки', style: serif(18))),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
         children: [
+          SafeArea(
+            bottom: false,
+            child: Row(
+              children: [
+                const ScBackButton(),
+                const SizedBox(width: 10),
+                Text('Настройки', style: serif(21)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
           Text('Любимая кофейня', style: serif(16)),
           const SizedBox(height: 8),
           Container(

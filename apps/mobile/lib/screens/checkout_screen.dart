@@ -136,11 +136,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         ? 'В кружке · +${s.cartStampsDue} печати'
         : 'С собой · напитки −30 ₽ · без печатей';
     return Scaffold(
-      appBar: AppBar(title: Text('Оплата', style: serif(18))),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
           children: [
+            Row(
+              children: [
+                const ScBackButton(),
+                const SizedBox(width: 10),
+                Text('Оплата', style: serif(21)),
+              ],
+            ),
+            const SizedBox(height: 4),
             Text('Кофейня на ${s.shopName}', style: sans(11, c: SCColors.muted)),
             const SizedBox(height: 10),
             mRow(PayMethod.card, 'Карта', 'Мок-подтверждение'),

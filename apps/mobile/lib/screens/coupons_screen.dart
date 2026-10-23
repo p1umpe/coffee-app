@@ -32,7 +32,13 @@ class _CouponsScreenState extends State<CouponsScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
           children: [
-            Text('Мои купоны', style: serif(21)),
+            Row(
+              children: [
+                const ScBackButton(),
+                const SizedBox(width: 10),
+                Text('Мои купоны', style: serif(21)),
+              ],
+            ),
             Text('6 печатей = 7-й кофе бесплатно',
                 style: sans(11, c: SCColors.muted)),
             const SizedBox(height: 10),

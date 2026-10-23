@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'api_client.dart';
+import 'categories.dart';
 import '../theme/app_tokens.dart';
 
 /// Сессия: гость, кофейня, режим кружка/с собой, корзина, категории меню.
@@ -22,7 +23,12 @@ class Session extends ChangeNotifier {
   // productId -> qty
   final Map<String, int> cart = {};
   List<MenuItem> menuCache = [];
+  /// Слаги категорий в порядке появления в меню: coffee, bakery, dessert, ...
+  /// Слаги стабильны, в отличие от заголовков («Кофе и напитки»).
   List<String> categories = [];
+  /// slug -> человекочитаемое название категории («Кофе и напитки»).
+  Map<String, String> categoryTitles = {};
+  /// Активный slug категории ('' — показываем всё меню).
   String activeCategory = '';
 
   bool get loggedIn => userId != null;
@@ -50,8 +56,12 @@ class Session extends ChangeNotifier {
 
   List<MenuItem> get filteredMenu {
     if (activeCategory.isEmpty) return menuCache;
-    return menuCache.where((m) => m.category == activeCategory).toList();
+    return menuCache.where((m) => m.categorySlug == activeCategory).toList();
   }
+
+  /// Название активной категории для UI (пусто — показываем всё меню).
+  String get activeCategoryTitle =>
+      activeCategory.isEmpty ? '' : categoryTitles[activeCategory] ?? activeCategory;
 
   void setShop(String id, String name) {
     shopId = id;
@@ -59,6 +69,7 @@ class Session extends ChangeNotifier {
     cart.clear();
     menuCache = [];
     categories = [];
+    categoryTitles = {};
     activeCategory = '';
     notifyListeners();
   }
@@ -68,19 +79,26 @@ class Session extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setCategory(String c) {
-    activeCategory = c;
+  /// Выбрать категорию по slug (см. [categories]).
+  void setCategory(String slug) {
+    activeCategory = slug;
     notifyListeners();
   }
 
   void setMenu(List<MenuItem> items) {
     menuCache = items;
-    final cats = <String>[];
+    final slugs = <String>[];
+    final titles = <String, String>{};
     for (final m in items) {
-      if (m.category.isNotEmpty && !cats.contains(m.category)) cats.add(m.category);
+      final slug = m.categorySlug;
+      if (slug.isEmpty) continue;
+      if (!slugs.contains(slug)) slugs.add(slug);
+      titles.putIfAbsent(slug, () => m.categoryTitle.isNotEmpty ? m.categoryTitle : categoryTitleForSlug(slug));
     }
-    categories = cats;
-    if (!cats.contains(activeCategory)) activeCategory = cats.isEmpty ? '' : cats.first;
+    categories = sortCategorySlugs(slugs);
+    categoryTitles = titles;
+    // Если выбранной категории больше нет в меню — показываем всё меню.
+    if (!slugs.contains(activeCategory)) activeCategory = '';
     notifyListeners();
   }
 
@@ -176,7 +194,10 @@ class MenuItem {
   final String id;
   final String title;
   final String? description;
-  final String category;
+  /// slug категории из API (`coffee`). Пустая строка — категории нет.
+  final String categorySlug;
+  /// Заголовок категории из API («Кофе и напитки») — только для показа.
+  final String categoryTitle;
   final int dineInPrice;
   final int takeawayPrice;
   final bool givesStamp;
@@ -187,9 +208,8 @@ class MenuItem {
       : id = j['id'] as String,
         title = j['title'] as String,
         description = j['description'] as String?,
-        category = (j['category'] is Map)
-            ? ((j['category'] as Map)['title']?.toString() ?? '')
-            : (j['category']?.toString() ?? ''),
+        categorySlug = _parseCategorySlug(j['category']),
+        categoryTitle = _parseCategoryTitle(j['category']),
         dineInPrice = (j['dineInPrice'] as num).toInt(),
         takeawayPrice = (j['takeawayPrice'] as num).toInt(),
         givesStamp = (j['givesStamp'] as bool?) ?? false,
@@ -198,18 +218,37 @@ class MenuItem {
             ? Map<String, dynamic>.from(j['kbju'] as Map)
             : null;
 
+  /// slug категории: из объекта {slug,title}, из строки-заголовка или из title.
+  static String _parseCategorySlug(Object? raw) {
+    if (raw is Map) {
+      final slug = raw['slug']?.toString() ?? '';
+      if (slug.isNotEmpty) return slug;
+      final title = raw['title']?.toString() ?? '';
+      return categorySlugFromTitle(title);
+    }
+    final s = raw?.toString() ?? '';
+    if (s.isEmpty) return '';
+    return categorySlugFromTitle(s);
+  }
+
+  /// Заголовок категории: из объекта {slug,title} или из строки.
+  static String _parseCategoryTitle(Object? raw) {
+    if (raw is Map) return raw['title']?.toString() ?? '';
+    return raw?.toString() ?? '';
+  }
+
   /// Мок для витрины, пока API пустое: цены как в макете.
   static List<MenuItem> mock() => [
-        _m('Латте', 'Эспрессо, молоко', 'Кофе', 26000, true),
-        _m('Флэт уайт', 'Двойной эспрессо', 'Кофе', 24000, true),
-        _m('Мокка', 'Шоколад, эспрессо', 'Кофе', 29000, true),
-        _m('Круассан', 'Сливочное масло', 'Выпечка', 19000, false),
+        _m('Латте', 'Эспрессо, молоко', 'coffee', 'Кофе и напитки', 26000, true),
+        _m('Флэт уайт', 'Двойной эспрессо', 'coffee', 'Кофе и напитки', 24000, true),
+        _m('Мокка', 'Шоколад, эспрессо', 'coffee', 'Кофе и напитки', 29000, true),
+        _m('Круассан', 'Сливочное масло', 'bakery', 'Выпечка', 19000, false),
       ];
 
-  static MenuItem _m(String t, String d, String c, int p, bool s) =>
+  static MenuItem _m(String t, String d, String cSlug, String cTitle, int p, bool s) =>
       MenuItem.fromJson({
         'id': 'mock-$t', 'title': t, 'description': d,
-        'category': {'title': c}, 'dineInPrice': p,
+        'category': {'slug': cSlug, 'title': cTitle}, 'dineInPrice': p,
         // Скидка −30 ₽ только на напитки (givesStamp). Еда — та же цена.
         'takeawayPrice': s ? p - 3000 : p, 'givesStamp': s, 'tags': [],
       });

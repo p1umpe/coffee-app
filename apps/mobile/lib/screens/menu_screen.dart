@@ -9,7 +9,8 @@ import '../widgets/product_widgets.dart';
 /// Меню по спеке 3.2: заголовок + кофейня, чипы категорий, ProductTile, CTA корзины.
 class MenuScreen extends StatefulWidget {
   final ValueChanged<MenuItem> onOpenProduct;
-  const MenuScreen({super.key, required this.onOpenProduct});
+  final VoidCallback onOpenCart;
+  const MenuScreen({super.key, required this.onOpenProduct, required this.onOpenCart});
 
   @override
   State<MenuScreen> createState() => _MenuScreenState();
@@ -87,13 +88,23 @@ class _MenuScreenState extends State<MenuScreen> {
                   height: 30,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
-                    itemCount: s.categories.length,
+                    itemCount: s.categories.length + 1,
                     separatorBuilder: (_, __) => const SizedBox(width: 6),
-                    itemBuilder: (_, i) => CategoryChip(
-                      label: s.categories[i],
-                      active: s.categories[i] == s.activeCategory,
-                      onTap: () => s.setCategory(s.categories[i]),
-                    ),
+                    itemBuilder: (_, i) {
+                      if (i == 0) {
+                        return CategoryChip(
+                          label: 'Всё меню',
+                          active: s.activeCategory.isEmpty,
+                          onTap: () => s.setCategory(''),
+                        );
+                      }
+                      final slug = s.categories[i - 1];
+                      return CategoryChip(
+                        label: s.categoryTitles[slug] ?? slug,
+                        active: slug == s.activeCategory,
+                        onTap: () => s.setCategory(slug),
+                      );
+                    },
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -111,7 +122,7 @@ class _MenuScreenState extends State<MenuScreen> {
                 child: CtaButton(
                   left: 'Корзина · ${s.cartCount}',
                   right: rub(s.cartTotal),
-                  onTap: () => Navigator.of(context).pushNamed('/cart'),
+                  onTap: () => widget.onOpenCart(),
                 ),
               ),
           ],

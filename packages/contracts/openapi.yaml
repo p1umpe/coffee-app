@@ -2,41 +2,194 @@ openapi: 3.0.3
 info:
   title: Simple Coffee API
   version: 0.3.0
-  description: MVP — самовывоз + кружка/печати (6+подарок) + оплата CARD/SBP + КДС по PIN + iiko
+  description: |
+    MVP — самовывоз + кружка/печати (6+подарок) + оплата CARD/SBP + КДС по PIN + iiko.
+
+    Глобальный префикс — `/v1`. Аутентификация гостя — OTP по телефону
+    (`/v1/auth/otp/request` → `/v1/auth/otp/verify`), персонала — PIN
+    (`/v1/auth/staff/login`). Токены передаются как `Authorization: Bearer <token>`.
+
+    Категории меню передаются объектом `{slug, title}`. Ключ фильтра — `slug`
+    (`coffee`, `bakery`, ...), а `title` — только человекочитаемый заголовок
+    («Кофе и напитки»). Мобильный клиент фильтрует меню строго по `slug`.
+servers:
+  - url: http://localhost:3000/v1
+    description: Локальная разработка
+  - url: http://localhost:3000
+    description: Без префикса /v1 (health-check)
+tags:
+  - name: Catalog
+  - name: Shops
+  - name: Auth
+  - name: Orders
+  - name: Payments
+  - name: Loyalty
+  - name: Feedback
+  - name: KDS
+  - name: iiko
+  - name: Health
+security:
+  - bearerAuth: []
 paths:
+  /v1/health:
+    get:
+      tags: [Health]
+      summary: Health-check сервиса
+      security: []
+      responses:
+        '200':
+          description: Сервис жив
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
   /v1/menu:
     get:
+      tags: [Catalog]
       summary: Меню точки (source — iiko, кэш 60с)
       parameters:
         - {name: shopId, in: query, required: true, schema: {type: string}}
       responses:
-        '200': {description: 'items: dineInPrice (база), takeawayPrice (напитки −30₽, еда без скидки), givesStamp'}
+        '200':
+          description: 'items: dineInPrice (база), takeawayPrice (напитки −30₽, еда без скидки), givesStamp'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MenuItem'
+        '400': {$ref: '#/components/responses/BadRequest'}
+  /v1/shops:
+    get:
+      tags: [Shops]
+      summary: Список кофеен (с lat/lon — ближайшие первыми)
+      parameters:
+        - {name: lat, in: query, required: false, schema: {type: number, format: double}}
+        - {name: lon, in: query, required: false, schema: {type: number, format: double}}
+      responses:
+        '200':
+          description: Список кофеен
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Shop'
   /v1/orders:
     post:
+      tags: [Orders]
       summary: Создать заказ (DINE_IN | TAKEAWAY)
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              required: [shopId, items, fulfillment, idempotencyKey]
-              properties:
-                shopId: {type: string}
-                fulfillment: {type: string, enum: [DINE_IN, TAKEAWAY]}
-                items: {type: array, items: {type: object}}
-                idempotencyKey: {type: string, format: uuid}
+              $ref: '#/components/schemas/CreateOrderRequest'
       responses:
-        '201': {description: orderId, number (А-12), eta, status PENDING_PAYMENT}
+        '201':
+          description: orderId, number (А-12), etaMin, status PENDING_PAYMENT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
   /v1/orders/my:
     get:
+      tags: [Orders]
       summary: Мои заказы (история гостя, desc, take<=50) — static route ДО /v1/orders/{id}
       parameters:
         - {name: userId, in: query, required: true, schema: {type: string}}
         - {name: take, in: query, required: false, schema: {type: integer, default: 20, maximum: 50}}
         - {name: skip, in: query, required: false, schema: {type: integer, default: 0}}
       responses:
-        '200': {description: orders + shop {id,name,address}}
+        '200':
+          description: 'orders + shop {id,name,address}'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  orders:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Order'
+                  shop:
+                    $ref: '#/components/schemas/Shop'
+  /v1/orders/by-shop/{shopId}:
+    get:
+      tags: [Orders]
+      summary: Заказы кофейни (лента точки) — static route ДО /v1/orders/{id}
+      parameters:
+        - {name: shopId, in: path, required: true, schema: {type: string}}
+      responses:
+        '200':
+          description: Список заказов кофейни
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Order'
+  /v1/orders/{id}:
+    get:
+      tags: [Orders]
+      summary: Один заказ по id (статус, номер, ETA)
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+      responses:
+        '200':
+          description: Заказ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '404': {$ref: '#/components/responses/NotFound'}
+  /v1/orders/{id}/cancel:
+    post:
+      tags: [Orders]
+      summary: Отмена заказа гостем (до приготовления)
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+      responses:
+        '201':
+          description: order CANCELLED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400': {$ref: '#/components/responses/BadRequest'}
+  /v1/orders/{id}/served:
+    post:
+      tags: [Orders]
+      summary: Отметить заказ выданным
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+      responses:
+        '201':
+          description: order SERVED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+  /v1/orders/{id}/rate:
+    post:
+      tags: [Orders]
+      summary: Оценка заказа (1–5) + комментарий (один раз, повтор перезаписывает)
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rating]
+              properties:
+                rating: {type: integer, minimum: 1, maximum: 5}
+                comment: {type: string}
+      responses:
+        '201':
+          description: Оценка сохранена
+        '404': {$ref: '#/components/responses/NotFound'}
   /v1/payments:
     post:
       summary: Создать платёж (CARD | SBP | COUPON | CASH_DESK), идемпотентный
@@ -72,6 +225,38 @@ paths:
       summary: Webhook провайдера (подпись — при подключении боевого PSP)
       responses:
         '200': {description: ok}
+  /v1/feedback:
+    post:
+      tags: [Feedback]
+      summary: 'Напишите нам (тикет: похвалить / пожаловаться / аренда / сотрудничество)'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeedbackRequest'
+      responses:
+        '201':
+          description: Тикет создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Feedback'
+        '400': {$ref: '#/components/responses/BadRequest'}
+    get:
+      tags: [Feedback]
+      summary: Список тикетов (desc, take 1..50, по умолчанию 20)
+      parameters:
+        - {name: take, in: query, required: false, schema: {type: integer, default: 20, minimum: 1, maximum: 50}}
+      responses:
+        '200':
+          description: Список тикетов
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Feedback'
   /v1/loyalty/me/{userId}:
     get:
       summary: Карта гостя (stamps из 6, купоны)
@@ -92,9 +277,56 @@ paths:
                 guestQr: {type: string}
       responses:
         '200': {description: stampsTotal, freeCoupons (6 печатей = купон)}
+  /v1/auth/otp/request:
+    post:
+      tags: [Auth]
+      summary: Запрос OTP для гостя по телефону
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone]
+              properties:
+                phone: {type: string, minLength: 6, example: '+79161234567'}
+      responses:
+        '201':
+          description: OTP отправлен (в проде — SMS, здесь код в ответе/логе)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OtpRequestResult'
+        '400': {$ref: '#/components/responses/BadRequest'}
+  /v1/auth/otp/verify:
+    post:
+      tags: [Auth]
+      summary: Подтверждение OTP → guest JWT
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone, code]
+              properties:
+                phone: {type: string, minLength: 6}
+                code: {type: string, minLength: 4}
+      responses:
+        '201':
+          description: accessToken (role=guest) + user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokens'
+        '400': {$ref: '#/components/responses/BadRequest'}
   /v1/auth/staff/login:
     post:
+      tags: [Auth]
       summary: Вход персонала по PIN (режим КДС в том же приложении) -> staff JWT
+      security: []
       requestBody:
         required: true
         content:
@@ -103,10 +335,33 @@ paths:
               type: object
               required: [login, pin]
               properties:
-                login: {type: string}
-                pin: {type: string}
+                login: {type: string, example: barista1}
+                pin: {type: string, minLength: 4, example: '1234'}
       responses:
-        '200': {description: accessToken (role=staff) + staff}
+        '201':
+          description: accessToken (role=staff) + staff
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokens'
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /v1/auth/staff/pin/change:
+    post:
+      tags: [Auth]
+      summary: Смена PIN сотрудника (требуется staff JWT)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [newPin]
+              properties:
+                newPin: {type: string, minLength: 4}
+      responses:
+        '201':
+          description: PIN обновлён
+        '401': {$ref: '#/components/responses/Unauthorized'}
   /v1/kds/orders:
     get:
       summary: Лента заказов точки (?shopId или своя точка из JWT). Только staff JWT
@@ -150,7 +405,259 @@ paths:
         '404': {description: user not found}
   /v1/iiko/webhook:
     post:
+      tags: [iiko]
       summary: Webhook статусов кухни iiko → push гостю
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [orderNumber, status]
+              properties:
+                orderNumber: {type: string}
+                status: {type: string}
       responses:
-        '200': {description: ok}
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: {type: boolean}
+                  mapped: {type: string}
+                  updated: {type: integer}
+  /v1/iiko/orders/{id}/status:
+    post:
+      tags: [iiko]
+      summary: Ручная смена статуса заказа бариста (КДС-кнопка), если iiko молчит
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: {type: string, example: COOKING}
+      responses:
+        '201':
+          description: Обновлённый заказ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '404': {$ref: '#/components/responses/NotFound'}
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    BadRequest:
+      description: Некорректный запрос
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Нет токена или он невалиден
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Не найдено
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  schemas:
+    Health:
+      type: object
+      properties:
+        ok: {type: boolean}
+        service: {type: string, example: simple-coffee-api}
+        version: {type: string, example: 0.3.0}
+    Error:
+      type: object
+      properties:
+        statusCode: {type: integer}
+        message: {type: string}
+        error: {type: string}
+    Category:
+      type: object
+    MenuItem:
+      type: object
+      required: [id, title, dineInPrice, takeawayPrice, givesStamp, tags]
+      properties:
+        id: {type: string}
+        title: {type: string}
+        description: {type: string, nullable: true}
+        imageUrl: {type: string, nullable: true}
+        category:
+          oneOf:
+            - $ref: '#/components/schemas/Category'
+            - type: 'null'
+        givesStamp: {type: boolean, description: 'Участник программы печатей (6+1)'}
+        tags:
+          type: array
+          items: {type: string}
+        kbju:
+          $ref: '#/components/schemas/Kbju'
+        dineInPrice: {type: integer, description: 'Цена в кофейне'}
+        takeawayPrice: {type: integer, description: 'Цена с собой (напитки −30₽, еда без скидки)'}
+    Shop:
+      type: object
+      properties:
+        id: {type: string}
+        name: {type: string}
+    OrderItem:
+      type: object
+      properties:
+        productId: {type: string}
+        qty: {type: integer}
+        priceEach: {type: integer}
+        modifiers: {type: object, additionalProperties: true}
+    Order:
+      type: object
+      properties:
+        id: {type: string}
+        number: {type: string, example: А-12}
+        status:
+          type: string
+          enum: [PENDING_PAYMENT, PAID, ACCEPTED, COOKING, READY, SERVED, CANCELLED, REFUNDED, FAILED]
+        fulfillment: {type: string, enum: [DINE_IN, TAKEAWAY]}
+        shopId: {type: string}
+        userId: {type: string, nullable: true}
+        total: {type: integer}
+        etaMin: {type: integer, nullable: true, description: 'ETA в минутах (поле есть в ответе создания)'}
+        rating: {type: integer, minimum: 1, maximum: 5, nullable: true}
+        comment: {type: string, nullable: true}
+        createdAt: {type: string, format: date-time}
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+    CreateOrderRequest:
+      type: object
+      required: [shopId, items, fulfillment, idempotencyKey]
+      properties:
+        shopId: {type: string}
+        fulfillment: {type: string, enum: [DINE_IN, TAKEAWAY]}
+        items:
+          type: array
+          items:
+            type: object
+            required: [productId, qty]
+    Payment:
+      type: object
+      properties:
+        id: {type: string}
+        orderId: {type: string}
+        method: {type: string, enum: [CARD, SBP, COUPON, CASH_DESK]}
+        status: {type: string, enum: [PENDING, SUCCEEDED, FAILED, REFUNDED]}
+        amount: {type: integer}
+        providerPayId: {type: string, nullable: true}
+    CreatePaymentRequest:
+      type: object
+      required: [orderId, method, idempotencyKey]
+      properties:
+        orderId: {type: string}
+        method: {type: string, enum: [CARD, SBP, COUPON, CASH_DESK]}
+        idempotencyKey: {type: string, format: uuid}
+        couponCode: {type: string}
+    FeedbackRequest:
+      type: object
+      required: [topic, text]
+      properties:
+        topic: {type: string, enum: [PRAISE, COMPLAINT, RENT, PARTNERSHIP]}
+        text: {type: string, minLength: 3, maxLength: 2000}
+        userId: {type: string}
+        contact: {type: string, maxLength: 100}
+    Feedback:
+      allOf:
+        - $ref: '#/components/schemas/FeedbackRequest'
+        - type: object
+          properties:
+            id: {type: string}
+            createdAt: {type: string, format: date-time}
+    OtpRequestResult:
+      type: object
+      properties:
+        ok: {type: boolean}
+        phone: {type: string}
+        expiresInSec: {type: integer}
+    AuthTokens:
+      type: object
+      properties:
+        accessToken: {type: string, description: 'JWT (guest или staff)'}
+        tokenType: {type: string, example: Bearer}
+        user:
+          type: object
+          nullable: true
+          properties:
+            id: {type: string}
+            phone: {type: string}
+            name: {type: string, nullable: true}
+        staff:
+          type: object
+          nullable: true
+          properties:
+            id: {type: string}
+            login: {type: string}
+            shopId: {type: string, nullable: true}
+            role: {type: string, example: BARISTA}
+    LoyaltyCard:
+      type: object
+      properties:
+        userId: {type: string}
+        stampsTotal: {type: integer, description: 'Всего печатей (из 6 — купон)'}
+        stampsToNext: {type: integer}
+        freeCoupons: {type: integer}
+        coupons:
+          type: array
+          items:
+            type: object
+            properties:
+              id: {type: string}
+              code: {type: string}
+              status: {type: string}
+              expiresAt: {type: string, format: date-time, nullable: true}
+
+            properties:
+              productId: {type: string}
+              qty: {type: integer, minimum: 1}
+              modifiers: {type: object, additionalProperties: true}
+        idempotencyKey: {type: string, format: uuid}
+        couponCode: {type: string}
+        userId: {type: string}
+
+        address: {type: string}
+        lat: {type: number, format: double, nullable: true}
+        lon: {type: number, format: double, nullable: true}
+        phone: {type: string, nullable: true}
+        iikoId: {type: string}
+        isNew: {type: boolean}
+
+      description: |
+        Категория товара. `slug` — стабильный ключ фильтра (`coffee`),
+        `title` — человекочитаемый заголовок («Кофе и напитки»).
+      required: [slug, title]
+      properties:
+        slug: {type: string, example: coffee}
+        title: {type: string, example: Кофе и напитки}
+    Kbju:
+      type: object
+      nullable: true
+      properties:
+        kcal: {type: integer}
+        protein: {type: integer}
+        fat: {type: integer}
+        carbs: {type: integer}
+
 

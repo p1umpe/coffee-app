@@ -67,19 +67,7 @@ class _ShopDetailsScreenState extends State<ShopDetailsScreen> {
           children: [
             Row(
               children: [
-                GestureDetector(
-                  onTap: () => Navigator.of(context).pop(),
-                  child: Container(
-                    width: 34,
-                    height: 34,
-                    decoration: BoxDecoration(
-                      color: SCColors.milk,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: SCColors.line),
-                    ),
-                    child: const Icon(Icons.arrow_back, size: 18),
-                  ),
-                ),
+                const ScBackButton(),
                 const SizedBox(width: 10),
                 Expanded(child: Text(name, style: serif(21))),
               ],

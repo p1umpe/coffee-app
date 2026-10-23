@@ -158,6 +158,29 @@ class NetErrorBanner extends StatelessWidget {
   }
 }
 
+/// Кнопка «назад» в стиле спеки: круг 34, milk, граница line.
+/// Имя ScBackButton — чтобы не конфликтовать с material.BackButton.
+class ScBackButton extends StatelessWidget {
+  const ScBackButton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.of(context).maybePop(),
+      child: Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          color: SCColors.milk,
+          shape: BoxShape.circle,
+          border: Border.all(color: SCColors.line),
+        ),
+        child: const Icon(Icons.arrow_back, size: 18, color: SCColors.espresso),
+      ),
+    );
+  }
+}
+
 /// Скелетоны загрузки (серо-бежевые), без спиннера.
 class SkeletonList extends StatelessWidget {
   final int count;

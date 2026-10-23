@@ -8,7 +8,14 @@ import '../widgets/stamp_shop.dart';
 class HomeScreen extends StatelessWidget {
   final VoidCallback onOpenMenu;
   final ValueChanged<MenuItem> onOpenProduct;
-  const HomeScreen({super.key, required this.onOpenMenu, required this.onOpenProduct});
+  final ValueChanged<String> onOpenCategory;
+  final VoidCallback onOpenProfile;
+  const HomeScreen(
+      {super.key,
+      required this.onOpenMenu,
+      required this.onOpenProduct,
+      required this.onOpenCategory,
+      required this.onOpenProfile});
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +43,7 @@ class HomeScreen extends StatelessWidget {
                       color: SCColors.caramel, shape: BoxShape.circle),
                   child: const Center(
                       child: Text('🦊', style: TextStyle(fontSize: 17))),
-                ),
+                ).withTap(context, onOpenProfile),
               ],
             ),
             const SizedBox(height: 12),
@@ -85,14 +92,14 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Row(
-              children: const [
-                _CatTile(emoji: '☕', label: 'Кофе'),
-                SizedBox(width: 8),
-                _CatTile(emoji: '🥐', label: 'Выпечка'),
-                SizedBox(width: 8),
-                _CatTile(emoji: '🍰', label: 'Десерты'),
-                SizedBox(width: 8),
-                _CatTile(emoji: '🍳', label: 'Завтраки'),
+              children: [
+                _CatTile(emoji: '☕', label: 'Кофе', category: 'coffee', onTap: onOpenCategory),
+                const SizedBox(width: 8),
+                _CatTile(emoji: '🥐', label: 'Выпечка', category: 'bakery', onTap: onOpenCategory),
+                const SizedBox(width: 8),
+                _CatTile(emoji: '🍰', label: 'Десерты', category: 'dessert', onTap: onOpenCategory),
+                const SizedBox(width: 8),
+                _CatTile(emoji: '🍳', label: 'Завтраки', category: 'breakfast', onTap: onOpenCategory),
               ],
             ),
           ],
@@ -105,26 +112,41 @@ class HomeScreen extends StatelessWidget {
 class _CatTile extends StatelessWidget {
   final String emoji;
   final String label;
-  const _CatTile({required this.emoji, required this.label});
+  final String category;
+  final ValueChanged<String> onTap;
+  const _CatTile(
+      {required this.emoji,
+      required this.label,
+      required this.category,
+      required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: SCColors.milk,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: SCColors.line),
-        ),
-        child: Column(
-          children: [
-            Text(emoji, style: const TextStyle(fontSize: 20)),
-            const SizedBox(height: 2),
-            Text(label, style: sans(10, w: FontWeight.w600)),
-          ],
+      child: GestureDetector(
+        onTap: () => onTap(category),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: SCColors.milk,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: SCColors.line),
+          ),
+          child: Column(
+            children: [
+              Text(emoji, style: const TextStyle(fontSize: 20)),
+              const SizedBox(height: 2),
+              Text(label, style: sans(10, w: FontWeight.w600)),
+            ],
+          ),
         ),
       ),
     );
   }
+}
+
+/// Маленький хелпер: сделать виджет кликабельным без раздувания дерева.
+extension _TapX on Widget {
+  Widget withTap(BuildContext context, VoidCallback onTap) =>
+      GestureDetector(onTap: onTap, child: this);
 }

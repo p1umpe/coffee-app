@@ -9,7 +9,8 @@ import '../widgets/common.dart';
 /// SizePicker, OrderTypeSwitch (выбранный espresso/cream), CTA с ценой.
 class ProductScreen extends StatefulWidget {
   final MenuItem item;
-  const ProductScreen({super.key, required this.item});
+  final VoidCallback onAddedToCart;
+  const ProductScreen({super.key, required this.item, required this.onAddedToCart});
 
   @override
   State<ProductScreen> createState() => _ProductScreenState();
@@ -29,20 +30,9 @@ class _ProductScreenState extends State<ProductScreen> {
             ListView(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
               children: [
-                Row(
+                const Row(
                   children: [
-                    GestureDetector(
-                      onTap: () => Navigator.of(context).pop(),
-                      child: Container(
-                        width: 34, height: 34,
-                        decoration: BoxDecoration(
-                          color: SCColors.milk,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: SCColors.line),
-                        ),
-                        child: const Icon(Icons.arrow_back, size: 18),
-                      ),
-                    ),
+                    ScBackButton(),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -81,12 +71,7 @@ class _ProductScreenState extends State<ProductScreen> {
                 right: rub(price),
                 onTap: () {
                   context.read<Session>().add(widget.item.id);
-                  Navigator.of(context).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                        content: Text(
-                            '${widget.item.title} добавлен 🦊 (+${s.fulfillment == Fulfillment.dineIn && widget.item.givesStamp ? 1 : 0} печати)')),
-                  );
+                  widget.onAddedToCart();
                 },
               ),
             ),

@@ -65,19 +65,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
           children: [
             Row(
               children: [
-                GestureDetector(
-                  onTap: () => Navigator.of(context).pop(),
-                  child: Container(
-                    width: 34,
-                    height: 34,
-                    decoration: BoxDecoration(
-                      color: SCColors.milk,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: SCColors.line),
-                    ),
-                    child: const Icon(Icons.arrow_back, size: 18),
-                  ),
-                ),
+                const ScBackButton(),
                 const SizedBox(width: 10),
                 Text('Напишите нам', style: serif(21)),
               ],
