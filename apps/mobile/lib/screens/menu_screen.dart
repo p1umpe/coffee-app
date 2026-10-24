@@ -19,6 +19,7 @@ class MenuScreen extends StatefulWidget {
 class _MenuScreenState extends State<MenuScreen> {
   bool loading = false;
   bool netError = false;
+  String? _loadedShopId;
 
   @override
   void initState() {
@@ -43,12 +44,13 @@ class _MenuScreenState extends State<MenuScreen> {
 
   Future<void> load() async {
     final s = context.read<Session>();
+    final requestedShop = s.shopId;
+    _loadedShopId = requestedShop;
     if (s.shopId == null) {
-      if (mounted) {
-        setState(() => netError = true);
-      }
-      // Витрина без API: мок как в макете
-      s.setMenu(MenuItem.mock());
+      // Кофейня не выбрана (API недоступен): мок-меню не показываем,
+      // его id нельзя отправлять в /orders. Показываем баннер «Повторить».
+      s.setMenu([]);
+      if (mounted) setState(() => netError = true);
       return;
     }
     if (mounted) setState(() { loading = true; netError = false; });
@@ -57,18 +59,27 @@ class _MenuScreenState extends State<MenuScreen> {
       final items = (r.data as List)
           .map((e) => MenuItem.fromJson(Map<String, dynamic>.from(e as Map)))
           .toList();
-      s.setMenu(items.isEmpty ? MenuItem.mock() : items);
+      if (s.shopId != requestedShop) return;
+      s.setMenu(items);
     } on DioException {
+      if (s.shopId != requestedShop) return;
+      // Старый menuCache этой же кофейни оставляем; моки не подставляем
       if (mounted) setState(() => netError = true);
-      if (s.menuCache.isEmpty) s.setMenu(MenuItem.mock());
     } finally {
-      if (mounted) setState(() => loading = false);
+      if (mounted && _loadedShopId == requestedShop) {
+        setState(() => loading = false);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final s = context.watch<Session>();
+    if (s.shopId != null && s.shopId != _loadedShopId) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && s.shopId != _loadedShopId) load();
+      });
+    }
     return Scaffold(
       body: SafeArea(
         child: Stack(

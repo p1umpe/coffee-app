@@ -42,12 +42,9 @@ class _ShopsScreenState extends State<ShopsScreen> {
           .toList();
       if (shops.isEmpty) throw const FormatException('empty');
     } catch (_) {
+      // Без API не подставляем мок-точки: их id ('mock-1') нельзя отправлять в /menu и /orders
+      shops = [];
       if (mounted) setState(() => netError = true);
-      shops = [
-        {'id': 'mock-1', 'name': 'Вайнера, 9', 'address': 'Вайнера, 9', 'meta': '300 м · до 22:00', 'open': true},
-        {'id': 'mock-2', 'name': 'Ленина, 24', 'address': 'Ленина, 24', 'meta': '650 м · до 21:00', 'open': true},
-        {'id': 'mock-3', 'name': 'Малышева, 51', 'address': 'Малышева, 51', 'meta': '1,2 км · до 22:00', 'open': false},
-      ];
     } finally {
       if (mounted) setState(() => loading = false);
     }
@@ -77,14 +74,15 @@ class _ShopsScreenState extends State<ShopsScreen> {
                   painter: _MapGridPainter(),
                   child: Stack(
                     children: [
-                      for (int i = 0; i < mockPins.length; i++)
+                      for (int i = 0; i < mockPins.length && i < shops.length; i++)
                         Positioned(
                           left: (mockPins[i]['dx'] as double),
                           top: (mockPins[i]['dy'] as double),
                           child: _Pin(
-                              highlight: i == 0 &&
-                                  (s.shopId == null ||
-                                      s.shopId == shops[i]['id'])),
+                            highlight: i == 0 &&
+                                shops.isNotEmpty &&
+                                (s.shopId == null ||
+                                    s.shopId == shops[i]['id'])),
                         ),
                     ],
                   ),

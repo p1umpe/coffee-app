@@ -12,6 +12,13 @@ import { CreateOrderDto } from './dto';
 export class OrdersService {
   constructor(private prisma: PrismaService, private config: ConfigService, private iiko: IikoService) {}
 
+  // P2002 = нарушение unique-ограничения. target — список полей (или имя индекса).
+  private isUniqueViolation(e: any, field: string): boolean {
+    if (e?.code !== 'P2002') return false;
+    const t = e?.meta?.target;
+    return Array.isArray(t) ? t.includes(field) : String(t ?? '').includes(field);
+  }
+
   private async priceFor(shopId: string, productId: string, fulfillment: string) {
     const discount = Number(this.config.get('TAKEAWAY_DISCOUNT') ?? 3000);
     const link = await this.prisma.shopProduct.findUnique({
@@ -55,22 +62,36 @@ export class OrdersService {
     }
     if (total < 0) throw new ConflictException('bad total');
 
-    // Номер А-12: день + счётчик (упрощённо — случайный короткий)
-    const number = `А-${Math.floor(10 + Math.random() * 89)}`;
-
-    const order = await this.prisma.order.create({
-      data: {
-        number,
-        shopId: dto.shopId,
-        userId: dto.userId ?? null,
-        fulfillment: dto.fulfillment as any,
-        status: total === 0 ? 'PAID' : 'PENDING_PAYMENT', // купон = уже оплачен
-        idempotencyKey: dto.idempotencyKey,
-        items: priced as any,
-        total,
-        stampsEarned: stampsDue,
-      },
-    });
+    // Номер А-123 (случайный, 100–999). При коллизии unique(number) пробуем другой номер.
+    let number = '';
+    let order: Awaited<ReturnType<typeof this.prisma.order.create>> | undefined;
+    for (let attempt = 0; attempt < 5 && !order; attempt++) {
+      number = `А-${Math.floor(100 + Math.random() * 900)}`;
+      try {
+        order = await this.prisma.order.create({
+          data: {
+            number,
+            shopId: dto.shopId,
+            userId: dto.userId ?? null,
+            fulfillment: dto.fulfillment as any,
+            status: total === 0 ? 'PAID' : 'PENDING_PAYMENT', // купон = уже оплачен
+            idempotencyKey: dto.idempotencyKey,
+            items: priced as any,
+            total,
+            stampsEarned: stampsDue,
+          },
+        });
+      } catch (e: any) {
+        if (this.isUniqueViolation(e, 'number')) continue; // занят номер — новый номер
+        if (this.isUniqueViolation(e, 'idempotencyKey')) {
+          // параллельный дубль запроса: отдаём уже созданный заказ
+          const dup = await this.prisma.order.findUnique({ where: { idempotencyKey: dto.idempotencyKey } });
+          if (dup) return { ...dup, deduped: true };
+        }
+        throw e;
+      }
+    }
+    if (!order) throw new ConflictException('could not allocate order number');
 
     // Отправка в iiko (mock сейчас, боевое — когда дашь ключ)
     try {

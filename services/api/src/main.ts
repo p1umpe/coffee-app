@@ -19,7 +19,7 @@ async function bootstrap() {
   SwaggerModule.setup('docs', app, doc);
 
   const port = Number(process.env.PORT ?? 3000);
-  await app.listen(port);
+  await app.listen(3000, '0.0.0.0');
   // eslint-disable-next-line no-console
   console.log(`SC API on :${port} (docs: /docs)`);
 }

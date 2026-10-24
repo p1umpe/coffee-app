@@ -26,18 +26,19 @@ class SimpleCoffeeApp extends StatefulWidget {
 }
 
 class _SimpleCoffeeAppState extends State<SimpleCoffeeApp> {
+  final GlobalKey<NavigatorState> _navKey = GlobalKey<NavigatorState>(); // NEW
   int tab = 0;
   bool onboardingDone = false;
 
   void openProduct(MenuItem item) {
-    Navigator.of(context).push(
+    _navKey.currentState?.push(
       MaterialPageRoute(
           builder: (_) => ProductScreen(
               item: item,
-              // Из карточки: в корзину и сразу показать корзину (п.1)
+              // Из карточки: в корзину; «назад» из корзины ведёт в меню
               onAddedToCart: () {
-                Navigator.of(context).pop();
-                setState(() => tab = 4);
+                _navKey.currentState?.pop(); // закрыть карточку
+                goCart();                    // открыть корзину поверх меню
               })),
     );
   }
@@ -49,13 +50,17 @@ class _SimpleCoffeeAppState extends State<SimpleCoffeeApp> {
     setState(() => tab = 1);
   }
 
-  void goCart() => setState(() => tab = 4);
+  // Корзина — обычный маршрут, а не вкладка: есть «назад», таб-бар остаётся под ней
+  void goCart() => _navKey.currentState?.push(
+        MaterialPageRoute(builder: (_) => const CartScreen()),
+      );
   void goProfile() => setState(() => tab = 3);
 
   @override
   Widget build(BuildContext context) {
     final session = context.watch<Session>();
     return MaterialApp(
+      navigatorKey: _navKey,
       title: 'Simple Coffee',
       theme: scTheme(),
       home: !session.loggedIn
@@ -78,16 +83,13 @@ class _SimpleCoffeeAppState extends State<SimpleCoffeeApp> {
                       onOpenCart: goCart),
                   const ShopsScreen(),
                   const ProfileScreen(),
-                  const CartScreen(),
                 ],
               ),
-              bottomNavigationBar: tab == 4
-                  ? null
-                  : AppTabBar(
-                      index: tab > 3 ? 1 : tab,
-                      cartCount: session.cartCount,
-                      onTap: (i) => setState(() => tab = i),
-                    ),
+              bottomNavigationBar: AppTabBar(
+                index: tab,
+                cartCount: session.cartCount,
+                onTap: (i) => setState(() => tab = i),
+              ),
             ),
     );
   }
